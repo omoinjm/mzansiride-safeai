@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+build/
+infra/.terraform/
+infra/*.tfstate*
+infra/terraform.tfvars
+infra/tfplan
+*.auto.tfvars
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+.env

@@ -1,0 +1,129 @@
+export type Place = { id: string; name: string; area: string; lat: number; lng: number }
+
+export type FareOption = {
+  type: 'individual' | 'shared'
+  riders: number
+  fare_zar: number
+  saving_zar: number
+  saving_pct: number
+  extra_minutes?: number
+}
+
+export type Quote = {
+  distance_km: number
+  duration_min: number
+  currency: string
+  options: FareOption[]
+  rules: Record<string, number>
+  simulated: boolean
+  points?: [number, number][]
+}
+
+export type Driver = {
+  driver_id: string
+  name: string
+  plate: string
+  vehicle: string
+  colour: string
+  rating: number
+  trips_completed: number
+  registered_since: string
+  status: string
+}
+
+export type Route = { distance_m: number; duration_s: number; points: [number, number][] }
+
+export type Notification = {
+  to_name: string
+  to: string
+  reason: string
+  at: string
+  text: string
+  channel: string
+  status: string
+}
+
+export type AiResult = { text: string; source: 'bedrock' | 'guardrail' | 'fallback'; model: string | null }
+
+export type SafetyEvent = {
+  trip_id: string
+  event_id: string
+  type: 'PROLONGED_STOP' | 'ROUTE_DEVIATION' | 'SOS' | 'TRIP_SHARED'
+  status: 'awaiting_checkin' | 'resolved_ok' | 'escalated' | 'info'
+  created_at: string
+  trip_ts?: number
+  lat?: number
+  lng?: number
+  details: { stationary_s?: number; deviation_m?: number; channel?: string }
+  response?: 'ok' | 'help'
+  response_channel?: string
+  responded_at?: string
+  escalation_reason?: string
+  notifications: Notification[]
+  prompt_ms?: number
+  ai?: Record<string, AiResult>
+}
+
+export type Trip = {
+  trip_id: string
+  passenger_name: string
+  pickup: string
+  destination: string
+  pickup_name: string
+  destination_name: string
+  ride_type: 'individual' | 'shared'
+  riders: number
+  fare_zar: number
+  individual_fare_zar: number
+  distance_km: number
+  duration_min: number
+  driver: Driver
+  status: 'driver_assigned' | 'in_progress' | 'completed' | 'cancelled'
+  safe_mode: boolean
+  trusted_contact: { name: string; phone: string } | null
+  created_at: string
+  started_at?: string
+  events_count: number
+  whatsapp_linked: boolean
+  last_position?: { lat: number; lng: number; ts: number }
+  route?: Route
+  events?: SafetyEvent[]
+}
+
+export type TelemetryResult = {
+  trip: { trip_id: string; status: string; safe_mode: boolean }
+  new_events: SafetyEvent[]
+  escalated: SafetyEvent[]
+  open_events: SafetyEvent[]
+  server_ms: number
+}
+
+export type DriverLookup = {
+  query: string
+  matches: Driver[]
+  verdict: 'registered' | 'caution' | 'not_found' | 'invalid'
+  advice: string
+}
+
+export type AppConfig = {
+  whatsapp: { enabled: boolean; number: string }
+  model: string
+  guardrail: boolean
+  checkin_timeout_s: number
+  region: string
+}
+
+export type Dashboard = {
+  summary: {
+    trips: number
+    trips_safe_mode: number
+    events: number
+    events_by_type: Record<string, number>
+    events_by_status: Record<string, number>
+    responses: { ok: number; help: number; no_response: number }
+    notifications: number
+    avg_prompt_ms: number | null
+  }
+  trips: Trip[]
+  events: SafetyEvent[]
+}

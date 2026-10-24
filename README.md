@@ -1,0 +1,114 @@
+<img src="web/public/logo.svg" width="64" alt="MzansiRide SafeAI logo">
+
+# MzansiRide SafeAI
+
+**A safety-first, AI-powered ride-sharing prototype for South Africa.** Built for the AWS AI Hackathon 2026
+(theme: *AI for Real-World Impact*). Proposal: [`docs/MzansiRide SafeAI proposal.pdf`](docs/MzansiRide%20SafeAI%20proposal.pdf).
+
+Passengers who worry about GBV, kidnapping, or travelling with unfamiliar drivers turn on **Safe Journey Mode**.
+Backend rules watch for a **prolonged stop** or **route deviation** and ask the passenger to **check in**. **Amazon Bedrock**
+explains the alert in plain language using approved guidance. If the passenger asks for help, or doesn't answer, their
+**trusted contact** is alerted. The same features work **on WhatsApp** through the open-source OpenWA gateway, for people with
+WhatsApp bundles but no mobile data. A shared-ride fare comparison shows how sharing makes trips more affordable.
+
+> Prototype: trips, drivers, vehicles, alerts and notifications are **simulated** and clearly labelled. It does not claim
+> to prevent crime or guarantee safety, and the AI does not replace emergency services (10111 / 112).
+
+## Architecture
+
+![Architecture](docs/architecture.png)
+
+| Service | Role in the prototype |
+|---|---|
+| **Amazon CloudFront + S3** | Serves the React SPA over HTTPS from the Johannesburg and Cape Town edges. The bucket is private (OAC). `/api/*` is forwarded to API Gateway, so the page and API share one origin (no CORS). |
+| **Amazon API Gateway (HTTP API)** | `ANY /api/{proxy+}` → `api` Lambda. `POST /whatsapp/webhook` → `whatsapp` Lambda. Throttled to 25 rps (burst 50). |
+| **AWS Lambda `api`** (Python 3.13, arm64) | Trips, **safety rules engine**, check-ins, escalation, trusted-contact notifications, assistant, dashboard. |
+| **AWS Lambda `whatsapp`** | Verifies the OpenWA HMAC signature, deduplicates, and acknowledges at once. It then processes asynchronously (it invokes itself) and replies through OpenWA. |
+| **Amazon Bedrock** (Anthropic Claude, EU inference profile) | Explains alerts and answers safety questions (Converse API), grounded in [`src/core/guidance.md`](src/core/guidance.md). |
+| **Amazon Bedrock Guardrails** | Content filters + prompt-attack filter + a denied topic: *criminal profiling of drivers*. The violence filter is off **for input** so that a passenger describing a threat is never blocked. |
+| **Amazon DynamoDB** | `trips`, `events` (check-ins, notifications), `drivers` (demo registry, seeded by Terraform), `whatsapp` (chat↔trip links, webhook dedupe, simulator outbox). On-demand, 14-day TTL. |
+| **Amazon EC2 + OpenWA** | Self-hosted WhatsApp gateway ([rmyndharis/OpenWA](https://github.com/rmyndharis/OpenWA), MIT). Caddy provides TLS and exposes **only** `send-text` and `health`. Admin goes through SSM Run Command (no SSH, no public dashboard). |
+| **SSM Parameter Store** | OpenWA API key (published by the instance on first boot), webhook HMAC secret, base URL, session id. |
+| **Amazon CloudWatch** | JSON logs, a dashboard (events, check-ins, WhatsApp traffic, Bedrock latency and tokens) and error alarms. |
+| IAM | One least-privilege role per function. No AWS credentials in the browser. CI deploys via GitHub OIDC. |
+
+### How a safety alert flows
+1. The browser **journey simulator** replays a real OSM road route and posts a position every second (`POST /api/trips/{id}/telemetry`, trip-time clock).
+2. `core/rules.py` (pure, unit-tested) flags `PROLONGED_STOP` (no movement for 3 min, away from pickup or destination) or `ROUTE_DEVIATION` (> 250 m from the route for 2 readings in a row). The event is stored as `awaiting_checkin`.
+3. The UI shows **"Are you OK?"**. `POST .../explain` asks Bedrock for a calm, neutral explanation (cached per event). If Bedrock fails, a rules-based text is shown, labelled as a fallback.
+4. **I'm OK** → `resolved_ok`. **I need help** → `escalated` + trusted contact notified. **No answer for 2 min of trip time** → escalated automatically.
+5. If the trip is linked to WhatsApp (`TRIP <code>`), the same prompt goes to WhatsApp, and replying `1`/`2` resolves it there.
+
+## Status: completed, simulated and outstanding
+
+| Feature (proposal §8.1) | Status | Notes |
+|---|---|---|
+| Responsive booking interface | ✅ Completed | React 19 + TS + Tailwind 4, mobile and desktop |
+| Driver & vehicle details | 🧪 Simulated | Demo registry in DynamoDB, labelled "not verified" |
+| Journey screen + Safe Journey Mode | ✅ Completed | Leaflet map on real OSM routes, trip clock, HUD |
+| Two safety-event rules | ✅ Completed | Backend rules; positions are simulated (no live GPS) |
+| Passenger check-in prompt | ✅ Completed | Plus auto-escalation and a measured time to prompt |
+| Bedrock safety assistant | ✅ Completed | Grounded prompt, Guardrail, fallback, per-event cache |
+| Alert dashboard | ✅ Completed | Team-code protected, auto-refresh |
+| Trusted-contact notification | 🧪 Simulated / ✅ real for allow-listed numbers | Real WhatsApp send via OpenWA only to `wa_allowlist` |
+| Individual vs shared fare comparison | ✅ Completed | Illustrative pricing rules |
+| AWS-backed workflow | ✅ Completed | Terraform, CI/CD, monitoring |
+| **WhatsApp channel** (team addition) | ✅ Completed | Driver check, trip link, check-ins, SOS, AI chat + web simulator |
+| Live GPS, map-matched deviation | ⏳ Outstanding | Amazon Location Service + device location |
+| User accounts | ⏳ Outstanding | Amazon Cognito (replaces the shared team code) |
+| Emergency services, real driver verification, payments, matching | ⏳ Outstanding | Need partners, compliance and operational processes |
+
+## Run it
+
+Prereqs: Terraform ≥ 1.10, Python 3.12+ with `uv`, Node 22+, AWS CLI v2 logged in to the team account (`aws login`), region **eu-west-1**.
+
+```bash
+make setup        # .venv + web deps
+make test         # 39 backend tests + typecheck + lint
+make local        # full app on http://localhost:8077, in-memory DB, offline AI fallback (= backup demo)
+make local-ai     # same with real Bedrock
+make init         # terraform init (state: same S3 bucket as RekogNail, key mzansiride/)
+make deploy       # tests → terraform plan → apply that plan → upload SPA → invalidate
+make url; make code
+make e2e          # Playwright journey (E2E_URL=$(make url) TEAM_CODE=$(make code) make e2e for the live site)
+```
+
+Optional `infra/terraform.tfvars` (git-ignored):
+
+```hcl
+wa_number    = "+27 82 000 0000"             # the number linked to OpenWA (shown in the app)
+wa_allowlist = ["+27820000001", "+27820000002"] # teammates: may receive trusted-contact alerts
+budget_email = "you@example.com"
+model_id     = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+```
+
+### WhatsApp (OpenWA) one-time setup
+1. `make deploy` creates the EC2 instance. On first boot it starts OpenWA + Caddy and publishes the API key to SSM (~3 min).
+2. `make wa-setup` creates the session, registers the webhook with its HMAC secret, and starts it.
+3. `make wa-qr` saves the QR code to `build/whatsapp-qr.png` and opens it. Scan it with the **spare** phone: WhatsApp → Linked devices.
+4. Message the number: `hi`. Check `make logs-wa` and `make wa-status`.
+
+Use a spare number: OpenWA is an unofficial client, and WhatsApp may restrict accounts that use it.
+
+### Continuous deployment
+Every push to `main` runs `.github/workflows/deploy.yml`: pytest + typecheck + lint + build → `terraform plan -out` → apply
+that plan → publish the SPA → smoke-test the live URL. PRs run the tests only. One-time: `./scripts/bootstrap_ci.sh`
+(GitHub OIDC role `github-deploy-mzansiride`, no stored AWS keys).
+
+## Repo map
+
+```
+src/core/       channel-agnostic logic: rules, fares, assistant (+guidance.md), trips, drivers, notify, commands (WhatsApp)
+src/api/        web API Lambda          src/whatsapp/  OpenWA webhook + sender Lambda
+web/            React app (pages/, components/, lib/sim.ts = journey simulator), e2e/ Playwright
+infra/          Terraform               openwa/        EC2 boot script (OpenWA + Caddy)
+scripts/        local_server.py (offline mode), openwa.sh (admin via SSM), bootstrap_ci.sh
+docs/           architecture, presentation-notes.md, aws-services-qa.md, screenshots/
+```
+
+## Privacy, security, responsible AI
+- **Rules detect, AI explains**: detection is deterministic and tested. The AI can't trigger or suppress an alert.
+- Alerts are framed as **check-ins, not accusations**. The prompt forbids blaming drivers or predicting crime, and the Guardrail denies profiling.
+- Every AI surface shows **10111 / 112**, and the assistant says it can't call anyone or know whether you're safe.
+- **Simulated data only**. Phone numbers are masked in the UI and logs, and records expire after 14 days (TTL). A real version would need a POPIA assessment, consent and retention rules.
+- No AWS credentials in the frontend. Secrets are in SSM, IAM is least-privilege, and the OpenWA admin API is never exposed.

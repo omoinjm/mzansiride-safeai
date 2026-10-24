@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 760" font-family="Inter, Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#059669"/>
+    </marker>
+    <style>
+      .box { fill: #fff; stroke-width: 2; rx: 12; }
+      .t { font-size: 15px; font-weight: 700; fill: #0f172a; }
+      .s { font-size: 12px; fill: #475569; }
+      .n { font-size: 11px; font-weight: 700; fill: #fff; }
+      .l { font-size: 11.5px; fill: #334155; }
+      .line { stroke: #334155; stroke-width: 1.8; fill: none; marker-end: url(#a); }
+      .wa { stroke: #059669; stroke-width: 1.8; fill: none; marker-end: url(#g); }
+      .dash { stroke-dasharray: 6 5; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="760" fill="#f8fafc"/>
+  <text x="32" y="40" font-size="22" font-weight="800" fill="#063f31">MzansiRide SafeAI: architecture</text>
+  <text x="32" y="62" class="s">AWS eu-west-1 (Ireland). Bedrock is not available in af-south-1. CloudFront serves South Africa from the Johannesburg and Cape Town edges.</text>
+
+  <!-- AWS cloud boundary -->
+  <rect x="250" y="88" width="1000" height="600" rx="18" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="268" y="112" font-size="13" font-weight="700" fill="#64748b">AWS Cloud · eu-west-1</text>
+
+  <!-- Users -->
+  <rect x="24" y="140" width="200" height="86" class="box" stroke="#0f766e"/>
+  <text x="40" y="170" class="t">Passenger (web)</text>
+  <text x="40" y="190" class="s">React SPA on phone / laptop</text>
+  <text x="40" y="208" class="s">book · Safe Journey · check-in</text>
+
+  <rect x="24" y="390" width="200" height="86" class="box" stroke="#059669"/>
+  <text x="40" y="420" class="t">Passenger (WhatsApp)</text>
+  <text x="40" y="440" class="s">no mobile data needed:</text>
+  <text x="40" y="458" class="s">CHECK · TRIP · SOS · AI chat</text>
+
+  <rect x="24" y="560" width="200" height="70" class="box" stroke="#059669"/>
+  <text x="40" y="590" class="t">Trusted contact</text>
+  <text x="40" y="610" class="s">alert on WhatsApp (allow-listed)</text>
+
+  <!-- Edge -->
+  <rect x="290" y="130" width="210" height="76" class="box" stroke="#8C4FFF"/>
+  <text x="306" y="160" class="t">Amazon CloudFront</text>
+  <text x="306" y="180" class="s">HTTPS · SA edge locations</text>
+  <text x="306" y="196" class="s">/api/* → API Gateway</text>
+
+  <rect x="290" y="240" width="210" height="64" class="box" stroke="#7AA116"/>
+  <text x="306" y="266" class="t">Amazon S3</text>
+  <text x="306" y="286" class="s">private SPA bucket (OAC)</text>
+
+  <rect x="560" y="130" width="220" height="76" class="box" stroke="#8C4FFF"/>
+  <text x="576" y="160" class="t">API Gateway (HTTP)</text>
+  <text x="576" y="180" class="s">/api/* · /whatsapp/webhook</text>
+  <text x="576" y="196" class="s">throttled 25 rps</text>
+
+  <!-- OpenWA -->
+  <rect x="290" y="380" width="230" height="110" class="box" stroke="#ED7100"/>
+  <text x="306" y="408" class="t">Amazon EC2 · OpenWA</text>
+  <text x="306" y="428" class="s">open-source WhatsApp gateway</text>
+  <text x="306" y="446" class="s">Caddy TLS: only send-text public</text>
+  <text x="306" y="464" class="s">admin via SSM only (no SSH)</text>
+
+  <!-- Lambdas -->
+  <rect x="560" y="260" width="220" height="100" class="box" stroke="#ED7100"/>
+  <text x="576" y="288" class="t">Lambda · api</text>
+  <text x="576" y="308" class="s">trips · safety rules engine</text>
+  <text x="576" y="326" class="s">check-ins · escalation · notify</text>
+  <text x="576" y="344" class="s">Python 3.13 · arm64</text>
+
+  <rect x="560" y="400" width="220" height="100" class="box" stroke="#ED7100"/>
+  <text x="576" y="428" class="t">Lambda · whatsapp</text>
+  <text x="576" y="448" class="s">HMAC verify · dedupe · async</text>
+  <text x="576" y="466" class="s">commands · replies · prompts</text>
+  <text x="576" y="484" class="s">shared core with api</text>
+
+  <!-- AI + data -->
+  <rect x="860" y="130" width="360" height="110" class="box" stroke="#01A88D"/>
+  <text x="876" y="160" class="t">Amazon Bedrock · Anthropic Claude</text>
+  <text x="876" y="180" class="s">explains alerts + answers safety questions (Converse API)</text>
+  <text x="876" y="198" class="s">grounded in approved guidance (system prompt)</text>
+  <text x="876" y="216" class="s">+ Bedrock Guardrails · rules-based fallback if down</text>
+
+  <rect x="860" y="270" width="360" height="110" class="box" stroke="#C925D1"/>
+  <text x="876" y="300" class="t">Amazon DynamoDB (on-demand, TTL)</text>
+  <text x="876" y="320" class="s">trips · events (check-ins, notifications)</text>
+  <text x="876" y="338" class="s">drivers (demo registry) · whatsapp (links, dedupe)</text>
+
+  <rect x="860" y="410" width="170" height="90" class="box" stroke="#E7157B"/>
+  <text x="876" y="438" class="t">SSM Parameter</text>
+  <text x="876" y="456" class="t">Store</text>
+  <text x="876" y="476" class="s">OpenWA key, secret</text>
+
+  <rect x="1050" y="410" width="170" height="90" class="box" stroke="#E7157B"/>
+  <text x="1066" y="438" class="t">CloudWatch</text>
+  <text x="1066" y="458" class="s">JSON logs · dashboard</text>
+  <text x="1066" y="476" class="s">alarms · Bedrock tokens</text>
+
+  <!-- planned -->
+  <rect x="860" y="530" width="170" height="70" class="box dash" stroke="#94a3b8"/>
+  <text x="876" y="558" class="t" fill="#64748b">Cognito</text>
+  <text x="876" y="578" class="s">planned: user sign-in</text>
+  <rect x="1050" y="530" width="170" height="70" class="box dash" stroke="#94a3b8"/>
+  <text x="1066" y="558" class="t" fill="#64748b">Location Service</text>
+  <text x="1066" y="578" class="s">planned: live GPS/routes</text>
+
+  <rect x="24" y="250" width="200" height="74" class="box dash" stroke="#f59e0b"/>
+  <text x="40" y="276" class="t">Journey simulator</text>
+  <text x="40" y="294" class="s">in the browser: replays a real</text>
+  <text x="40" y="310" class="s">OSM route, posts telemetry</text>
+  <path d="M124,250 L124,226" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="5 4"/>
+
+  <!-- arrows -->
+  <path class="line" d="M224,180 L290,170"/>
+  <circle cx="256" cy="162" r="10" fill="#0f766e"/><text x="252" y="166" class="n">1</text>
+  <path class="line" d="M395,206 L395,240"/>
+  <path class="line" d="M500,168 L560,168"/>
+  <circle cx="530" cy="155" r="10" fill="#0f766e"/><text x="526" y="159" class="n">2</text>
+  <path class="line" d="M670,206 L670,260"/>
+  <path class="line" d="M780,290 C820,290 820,190 860,190"/>
+  <circle cx="822" cy="236" r="10" fill="#0f766e"/><text x="818" y="240" class="n">4</text>
+  <path class="line" d="M780,320 L860,320"/>
+  <circle cx="822" cy="308" r="10" fill="#0f766e"/><text x="818" y="312" class="n">3</text>
+
+  <path class="wa" d="M224,433 L290,433"/>
+  <circle cx="256" cy="420" r="10" fill="#059669"/><text x="252" y="424" class="n">5</text>
+  <path class="wa" d="M520,395 L536,395 L536,192 L560,192"/>
+  <text x="420" y="372" class="l" fill="#059669">webhook (HMAC)</text>
+  <path class="line" d="M566,206 L566,214 L548,214 L548,430 L560,430"/>
+  <path class="wa" d="M560,470 L520,470"/>
+  <circle cx="540" cy="484" r="10" fill="#059669"/><text x="536" y="488" class="n">6</text>
+  <path class="wa" d="M290,470 C250,470 250,595 224,595"/>
+  <path class="line" d="M780,430 L860,440"/>
+  <path class="line" d="M780,460 C830,460 830,360 860,360"/>
+  <path class="line" d="M640,360 L640,400"/>
+  <text x="648" y="386" class="l">async invoke</text>
+
+  <!-- legend / flow -->
+  <rect x="24" y="700" width="1232" height="48" rx="10" fill="#ecfdf6" stroke="#a7f3d0"/>
+  <text x="40" y="720" class="l"><tspan font-weight="700">Flow: </tspan>1 open app · 2 API call · 3 rules flag a stop/deviation, event stored · 4 Bedrock explains it + options · 5 WhatsApp → OpenWA → webhook · 6 reply / check-in prompt / contact alert via OpenWA</text>
+  <text x="40" y="738" class="l"><tspan font-weight="700">Legend: </tspan>solid = implemented · dashed orange = simulated in the prototype · dashed grey = planned · green = WhatsApp channel</text>
+</svg>

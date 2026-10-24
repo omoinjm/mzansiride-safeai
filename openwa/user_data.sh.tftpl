@@ -1,0 +1,59 @@
+#!/bin/bash
+# Boot script for the OpenWA gateway (Amazon Linux 2023). Rendered by Terraform (infra/openwa.tf).
+set -euxo pipefail
+
+# 2 GB swap: headless Chromium (whatsapp-web.js) is memory hungry on a 2 GB instance.
+if [ ! -f /swapfile ]; then
+  dd if=/dev/zero of=/swapfile bs=1M count=2048 && chmod 600 /swapfile && mkswap /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+swapon -a || true
+
+dnf install -y docker
+systemctl enable --now docker
+
+mkdir -p /opt/openwa/data /opt/caddy
+docker network inspect wa >/dev/null 2>&1 || docker network create wa
+
+cat > /opt/caddy/Caddyfile <<'CADDY'
+${domain} {
+	@allowed path_regexp allowed ^/api/(health|sessions/[A-Za-z0-9_-]+/messages/send-text)$
+	handle @allowed {
+		reverse_proxy openwa:2785
+	}
+	handle {
+		respond "Not found" 404
+	}
+	log
+}
+CADDY
+
+docker rm -f openwa caddy 2>/dev/null || true
+docker run -d --name openwa --restart unless-stopped --network wa \
+  -p 127.0.0.1:2785:2785 \
+  --shm-size=1g \
+  -v /opt/openwa/data:/app/data \
+  -e NODE_ENV=production \
+  -e DATABASE_TYPE=sqlite \
+  -e DATABASE_SYNCHRONIZE=true \
+  -e ENGINE_TYPE=whatsapp-web.js \
+  -e AUTO_START_SESSIONS=true \
+  -e RESOLVE_LID_TO_PHONE=true \
+  -e TRUSTED_PROXIES=172.16.0.0/12 \
+  ${image}
+
+docker run -d --name caddy --restart unless-stopped --network wa \
+  -p 80:80 -p 443:443 \
+  -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+  -v caddy_data:/data -v caddy_config:/config \
+  caddy:2.10.2
+
+# OpenWA writes its generated admin API key on first boot; publish it for the Lambda.
+for i in $(seq 1 60); do
+  if [ -s /opt/openwa/data/.api-key ]; then
+    aws ssm put-parameter --region ${region} --name "${param_prefix}api_key" --type SecureString \
+      --overwrite --value "$(cat /opt/openwa/data/.api-key)"
+    break
+  fi
+  sleep 5
+done

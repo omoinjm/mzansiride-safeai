@@ -1,0 +1,102 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two applies against the shared state at once.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-west-1
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q tests
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npx tsc -b && npx eslint . && npx vite build
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC token for AWS, no stored keys
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v5
+        with:
+          name: web-dist
+          path: web/dist
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.11.4
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform init
+        run: terraform -chdir=infra init -input=false -backend-config=backend.hcl
+
+      - name: Terraform plan
+        run: terraform -chdir=infra plan -input=false -no-color -out=tfplan | tee plan.txt
+
+      - name: Plan summary
+        run: |
+          {
+            echo '### Terraform plan'
+            echo '```'
+            grep -E '^\s+# |^Plan:|^No changes' plan.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Terraform apply (exactly the reviewed plan)
+        run: terraform -chdir=infra apply -input=false -no-color tfplan
+
+      - name: Publish web app
+        run: |
+          BUCKET=$(terraform -chdir=infra output -raw web_bucket)
+          aws s3 sync web/dist "s3://$BUCKET" --delete --exclude index.html --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp web/dist/index.html "s3://$BUCKET/index.html" --cache-control "no-cache"
+          aws cloudfront create-invalidation --distribution-id "$(terraform -chdir=infra output -raw distribution_id)" --paths "/index.html" "/" > /dev/null
+
+      - name: Smoke test live URL
+        run: |
+          URL=$(terraform -chdir=infra output -raw web_url)
+          for i in $(seq 1 10); do
+            curl -fsS "$URL/api/health" | grep -q '"ok": true' && curl -fsS "$URL/" | grep -q 'MzansiRide' && break
+            sleep 10
+          done
+          curl -fsS "$URL/api/health" | grep -q '"ok": true'
+          curl -fsS "$URL/" | grep -q 'MzansiRide'
+          curl -fsS -X POST "$URL/api/quote" -H 'content-type: application/json' -d '{"pickup":"rosebank","destination":"sandton"}' | grep -q '"fare_zar"'
+          echo "### Live: $URL" >> "$GITHUB_STEP_SUMMARY"
