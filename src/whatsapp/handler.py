@@ -24,9 +24,35 @@ def _ok(body=None, status=200):
     return {"statusCode": status, "headers": {"content-type": "application/json"}, "body": json.dumps(body or {"ok": True})}
 
 
+# WhatsApp's privacy IDs: incoming chats can arrive as "<lid>@lid" instead of "<phone>@c.us". Trips are linked
+# to "<phone>@c.us" when the passenger gives their number at booking, so incoming @lid chats are mapped back
+# to the phone chat: from a phone field in the webhook if OpenWA sends one, else from a mapping we learn when
+# a send to "<phone>@c.us" comes back with a "<lid>@lid" message id.
+PHONE_FIELDS = ("phone", "senderPhone", "fromPhone", "phoneNumber")
+
+
+def _remember_lid(chat_id, resp):
+    msg_id = str((resp or {}).get("messageId") or (resp or {}).get("id") or "")
+    if chat_id.endswith("@c.us") and "@lid" in msg_id:
+        lid = msg_id.split("@lid")[0].split("_")[-1]
+        store.put("whatsapp", {"pk": f"lid#{lid}", "chat": chat_id, "ttl": store.ttl_days(30)})
+
+
+def _phone_chat(chat_id, data):
+    if not chat_id or not chat_id.endswith("@lid"):
+        return chat_id
+    contact = data.get("contact") or data.get("sender") or {}
+    for field in PHONE_FIELDS:
+        phone = notify.msisdn(str(data.get(field) or contact.get(field) or contact.get("number") or ""))
+        if phone:
+            return f"{phone}@c.us"
+    known = store.get("whatsapp", {"pk": f"lid#{chat_id.split('@')[0]}"})
+    return known["chat"] if known else chat_id
+
+
 def _send(chat_id, text):
     try:
-        openwa.send_text(chat_id, text)
+        _remember_lid(chat_id, openwa.send_text(chat_id, text))
         log("INFO", "whatsapp_sent", chat=notify.mask(chat_id), chars=len(text))
     except Exception as e:
         log("ERROR", "whatsapp_send_failed", chat=notify.mask(chat_id), error=str(e)[:300])
@@ -66,7 +92,10 @@ def handle_webhook(event, context):
     data = payload.get("data") or {}
     if data.get("fromMe") or data.get("isGroup") or data.get("kind", "individual") != "individual":
         return _ok()
-    chat_id = data.get("chatId") or data.get("from")
+    raw_chat = data.get("chatId") or data.get("from")
+    chat_id = _phone_chat(raw_chat, data)
+    if raw_chat != chat_id or raw_chat.endswith("@lid"):
+        log("INFO", "webhook_lid", mapped=raw_chat != chat_id, keys=sorted(data))
     text = data.get("body") if data.get("type", "text") == "text" else ""
 
     key = payload.get("idempotencyKey") or data.get("id")

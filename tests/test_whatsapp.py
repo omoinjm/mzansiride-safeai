@@ -66,3 +66,30 @@ def test_notify_allowlist(aws, monkeypatch):
     r = notify.notify_trusted_contact(trip, None, "passenger_sos")
     assert r["status"] == "queued:27825550101@c.us"
     assert notify.msisdn("+27 (82) 555-0101") == "27825550101"
+
+
+def test_lid_chats_map_back_to_the_phone_chat(aws, monkeypatch):
+    """Check-ins go to <phone>@c.us; replies may arrive from the WhatsApp privacy id <lid>@lid."""
+    from whatsapp import handler
+    monkeypatch.setattr(openwa, "_params", {"webhook_secret": "s3cret-s3cret-123"})
+    monkeypatch.setattr(openwa, "send_text", lambda chat, text: {"messageId": "true_93926740500592@lid_3EB0AB"})
+    invoked = []
+
+    class FakeLambda:
+        def invoke(self, **kw):
+            invoked.append(json.loads(kw["Payload"]))
+
+    monkeypatch.setattr(handler.boto3, "client", lambda name: FakeLambda())
+    msg = {"event": "message.received", "idempotencyKey": "lid1",
+           "data": {"chatId": "93926740500592@lid", "body": "1", "type": "text", "fromMe": False}}
+
+    handler.handler(_webhook(msg), Ctx())
+    assert invoked[-1]["chat_id"] == "93926740500592@lid"  # unknown yet
+
+    handler.handler({"action": "send", "chat_id": "27724326766@c.us", "text": "check-in"}, Ctx())
+    handler.handler(_webhook({**msg, "idempotencyKey": "lid2"}), Ctx())
+    assert invoked[-1]["chat_id"] == "27724326766@c.us"  # learned from the send
+
+    with_phone = {**msg, "idempotencyKey": "lid3", "data": {**msg["data"], "chatId": "111@lid", "senderPhone": "+27 82 123 4567"}}
+    handler.handler(_webhook(with_phone), Ctx())
+    assert invoked[-1]["chat_id"] == "27821234567@c.us"
