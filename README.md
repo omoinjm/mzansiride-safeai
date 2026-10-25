@@ -23,6 +23,80 @@ audit trail for regulators. A shared-ride fare comparison and a WhatsApp driver/
 
 ![Architecture](docs/architecture.png)
 
+<details open>
+<summary>The same architecture as a Mermaid diagram (rendered by GitHub, editable as text)</summary>
+
+```mermaid
+flowchart LR
+    subgraph people["People"]
+        direction TB
+        P["Passenger (web app)<br/>book · Safe Journey · check-in"]
+        OP["Fleet operator<br/>live fleet · AI triage · acknowledge"]
+        PW["Passenger (WhatsApp)<br/>CHECK · TRIP · SOS · 1/2 · AI chat"]
+        TC["Trusted contact<br/>WhatsApp alert (allow-listed)"]
+        SIM["Journey simulator in the browser<br/>replays real OSM roads · SIMULATED"]
+    end
+
+    subgraph edge["Edge (AWS)"]
+        direction TB
+        CF["Amazon CloudFront<br/>HTTPS · SA edge locations"]
+        S3["Amazon S3<br/>private SPA bucket (OAC)"]
+        EC2["Amazon EC2 · OpenWA<br/>WhatsApp gateway · Caddy TLS"]
+    end
+
+    subgraph compute["API and compute (AWS)"]
+        direction TB
+        APIGW["API Gateway (HTTP)<br/>/api/* · /whatsapp/webhook"]
+        LAPI["Lambda · api<br/>rules engine · check-ins<br/>no-answer ladder · fleet view"]
+        LWA["Lambda · whatsapp<br/>HMAC verify · dedupe · replies"]
+    end
+
+    subgraph data["AI, data, ops (AWS)"]
+        direction TB
+        BR["Amazon Bedrock<br/>Claude Haiku 5.5 · Nova Lite fallback<br/>Guardrails"]
+        DDB[("DynamoDB<br/>trips · events · drivers · whatsapp")]
+        SSM["SSM Parameter Store<br/>gateway key · webhook secret"]
+        CW["CloudWatch<br/>logs · dashboard · alarms"]
+    end
+
+    subgraph planned["Planned"]
+        direction TB
+        COG["Amazon Cognito · sign-in"]
+        LOC["Amazon Location Service · live GPS"]
+    end
+
+    SIM -.->|telemetry| P
+    P -->|"1 open app"| CF
+    OP --> CF
+    CF --> S3
+    CF -->|"2 /api/*"| APIGW
+    APIGW --> LAPI
+    LAPI -->|"3 rules flag a stop or<br/>deviation; store the event"| DDB
+    LAPI -->|"4 explain; triage<br/>on escalation"| BR
+    PW <-->|"5 message · 6 check-in, reply"| EC2
+    EC2 -->|"6 contact alert"| TC
+    EC2 -->|"webhook (HMAC)"| APIGW
+    APIGW --> LWA
+    LAPI -->|async invoke| LWA
+    LWA -->|send| EC2
+    LWA --> BR
+    LWA --> DDB
+    LWA --> SSM
+    compute -.->|logs| CW
+    COG -.- APIGW
+    LOC -.- LAPI
+
+    classDef aws fill:#ecfdf6,stroke:#078a66,color:#063f31
+    classDef sim fill:#fff7ed,stroke:#f59e0b,stroke-dasharray: 5 4,color:#7c2d12
+    classDef plan fill:#f1f5f9,stroke:#94a3b8,stroke-dasharray: 5 4,color:#475569
+    class CF,S3,EC2,APIGW,LAPI,LWA,BR,DDB,SSM,CW aws
+    class SIM sim
+    class COG,LOC plan
+```
+
+Solid = implemented · dashed orange = simulated in the prototype · dashed grey = planned. The numbers follow the same flow as the image above.
+</details>
+
 | Service | Role in the prototype |
 |---|---|
 | **Amazon CloudFront + S3** | Serves the React SPA over HTTPS from the Johannesburg and Cape Town edges. The bucket is private (OAC). `/api/*` is forwarded to API Gateway, so the page and API share one origin (no CORS). |
