@@ -13,6 +13,7 @@ const RISK_LABEL: Record<Risk, string> = { red: 'Needs action', amber: 'Awaiting
 
 export default function DashboardPage() {
   const [code, setCode] = useState(store('mz.teamCode', ''))
+  const [tab, setTab] = useState<'events' | 'trips'>(store('mz.fleetTab', 'events'))
   const [draft, setDraft] = useState('')
   const [data, setData] = useState<Dashboard | null>(null)
   const [error, setError] = useState('')
@@ -167,7 +168,27 @@ export default function DashboardPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <h2 className="border-b border-slate-100 p-4 font-bold">All safety events</h2>
+        <div role="tablist" aria-label="Events and trips" className="flex gap-1 border-b border-slate-100 px-3 pt-3">
+          {([
+            ['events', 'All safety events', data.events.length],
+            ['trips', 'Recent trips', data.trips.length],
+          ] as const).map(([key, label, count]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => {
+                setTab(key)
+                save('mz.fleetTab', key)
+              }}
+              className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-bold ${tab === key ? 'border-brand-600 text-brand-800' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+              {label} <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{count}</span>
+            </button>
+          ))}
+        </div>
+        {tab === 'events' ? (
+          <div role="tabpanel" aria-label="All safety events">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
@@ -220,10 +241,9 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="card overflow-hidden">
-        <h2 className="border-b border-slate-100 p-4 font-bold">Recent trips</h2>
+          </div>
+        ) : (
+          <div role="tabpanel" aria-label="Recent trips">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
@@ -262,6 +282,8 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
+          </div>
+        )}
       </div>
     </div>
   )

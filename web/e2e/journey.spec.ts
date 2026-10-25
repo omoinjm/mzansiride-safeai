@@ -53,6 +53,9 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
   await page.getByRole('button', { name: 'Open dashboard' }).click()
   await expect(page.getByText('Fleet safety dashboard')).toBeVisible()
   await expect(page.getByRole('cell', { name: /Prolonged stop/ }).first()).toBeVisible()
+  await page.getByRole('tab', { name: /Recent trips/ }).click()
+  await expect(page.getByRole('tabpanel', { name: 'Recent trips' }).getByText('Safe mode')).toBeVisible()
+  await page.getByRole('tab', { name: /All safety events/ }).click()
   await page.screenshot({ path: `${shots}/06-dashboard.png`, fullPage: true })
 
   expect(errors).toEqual([])
