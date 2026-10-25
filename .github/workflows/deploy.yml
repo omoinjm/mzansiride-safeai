@@ -68,6 +68,10 @@ jobs:
         run: terraform -chdir=infra init -input=false -backend-config=backend.hcl
 
       - name: Terraform plan
+        env:
+          # Demo WhatsApp numbers live in repo secrets, never in the code (infra/terraform.tfvars locally).
+          TF_VAR_wa_number: ${{ secrets.WA_NUMBER }}
+          TF_VAR_wa_allowlist: ${{ secrets.WA_ALLOWLIST || '[]' }}
         run: terraform -chdir=infra plan -input=false -no-color -out=tfplan | tee plan.txt
 
       - name: Plan summary

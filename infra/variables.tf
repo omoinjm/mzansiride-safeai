@@ -50,12 +50,14 @@ variable "wa_number" {
   description = "Display number of the WhatsApp account linked to OpenWA, e.g. +27 82 000 0000 (shown in the web app)."
   type        = string
   default     = ""
+  sensitive   = true
 }
 
 variable "wa_allowlist" {
   description = "Phone numbers that may receive unsolicited WhatsApp messages (trusted-contact alerts). Demo team only."
   type        = list(string)
   default     = []
+  sensitive   = true
 }
 
 variable "team_code" {
