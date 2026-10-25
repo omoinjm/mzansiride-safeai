@@ -14,13 +14,13 @@ def test_booking_with_whatsapp_number_links_without_trip_code(aws):
     assert trip["whatsapp_linked"] and trip["whatsapp_channel"] == "simulator"
     assert "0199" not in trip["passenger_phone"]
     welcome = outbox("fleet1")
-    assert len(welcome) == 1 and "Hi Thandi" in welcome[0] and trip["trip_id"] in welcome[0]
+    assert len(welcome) == 1 and "Safe Journey is on" in welcome[0] and trip["driver"]["plate"] in welcome[0]
 
     stop_for(trip["trip_id"], 200)
     prompt = outbox("fleet1")
     assert "Face ID" in prompt[0]  # start-of-ride driver check (simulated)
-    assert len(prompt) == 2 and "Hi Thandi, we noticed your trip to Sandton" in prompt[1]
-    assert "Reply *2* = HELP" in prompt[1]
+    assert len(prompt) == 2 and "Thandi, your trip has stopped. *Are you safe?*" in prompt[1]
+    assert "*2* = Help" in prompt[1]
 
 
 def test_invalid_passenger_number_rejected(aws):

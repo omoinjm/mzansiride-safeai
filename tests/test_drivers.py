@@ -33,4 +33,4 @@ def test_assign_never_picks_flagged(aws):
 
 
 def test_format_lookup_mentions_demo(aws):
-    assert "not an official police check" in drivers.format_lookup(drivers.lookup("sipho"))
+    assert "demo registry" in drivers.format_lookup(drivers.lookup("sipho"))

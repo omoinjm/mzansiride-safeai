@@ -79,7 +79,7 @@ def test_whatsapp_free_text_answers(aws, monkeypatch):
     assert "Linked to trip" in wa(f"trip {tid}", session="ft")  # picks up the check-in that is already open
 
     model_says(monkeypatch, "unclear")
-    assert "reply *1*" in wa("maybe", session="ft")
+    assert "Reply *1*" in wa("maybe", session="ft")
     model_says(monkeypatch, "ok", "stopped for fuel")
     assert "stopped for fuel" in wa("we're just getting petrol", session="ft")
     assert trips.chat_link("sim:ft")["pending_event_id"] is None
@@ -89,7 +89,7 @@ def test_whatsapp_danger_escalates_without_ai(aws, monkeypatch):
     tid, ev = open_checkin()
     wa(f"trip {tid}", session="dz")
     calls = model_says(monkeypatch, "ok")
-    assert "Understood" in wa("he locked the doors", session="dz")
+    assert "Alerting" in wa("he locked the doors", session="dz")
     assert trips.get_event(tid, ev)["status"] == "escalated" and calls[-1] == "triage"
 
 
@@ -149,3 +149,38 @@ def test_photo_check_unreadable_and_bad_input(aws, monkeypatch):
     assert call("POST", "/api/drivers/photo-check", {"image": PNG, "mime": "image/gif"})[0] == 400
     big = base64.b64encode(b"0" * (3 * 1024 * 1024 + 1)).decode()
     assert call("POST", "/api/drivers/photo-check", {"image": big, "mime": "image/png"})[0] == 400
+
+
+# ---------- short messages + help after an automatic escalation ----------
+
+def test_help_after_auto_escalation_still_alerts_the_contact(aws, monkeypatch):
+    model_says(monkeypatch, "ok")
+    tid = book(safe_mode=True)["trip_id"]
+    stop_for(tid, 200 + 135)  # check-in, then no reply: escalated for no_response, contact told once
+    ev = next(e for e in trips.list_events(tid) if e["type"] == "PROLONGED_STOP")
+    assert ev["status"] == "escalated" and len(ev["notifications"]) == 1
+
+    out = call("POST", f"/api/trips/{tid}/events/{ev['event_id']}/reply", {"text": "help"})[1]
+    reasons = [n["reason"] for n in out["event"]["notifications"]]
+    assert reasons == ["no_response", "passenger_help"]  # the contact hears that they asked for help
+    assert "asked for HELP" in out["event"]["notifications"][-1]["text"]
+    # a second "help" doesn't spam the contact
+    out = call("POST", f"/api/trips/{tid}/events/{ev['event_id']}/reply", {"text": "2"})[1]
+    assert len(out["event"]["notifications"]) == 2
+
+
+def test_whatsapp_messages_are_short(aws, monkeypatch):
+    from core import notify
+    model_says(monkeypatch, "ok")
+    trip = book(safe_mode=True, passenger_phone="082 555 0199", wa_session="short")
+    stop_for(trip["trip_id"], 200 + 135)
+    sent = [m["text"] for m in call("GET", "/api/whatsapp/outbox", qs={"session": "short"})[1]["messages"]]
+    sent += [wa(t, session="short") for t in ("hi", "check CA 123-456", "check BX 33 KK GP", "2", "sos")]
+    ev = trips.list_events(trip["trip_id"])[0]
+    sent.append(notify.contact_message(trips.get_trip(trip["trip_id"]), ev, "passenger_help"))
+    for text in sent:
+        lines = [l for l in text.splitlines() if l.strip()]
+        assert len(lines) <= 6 and all(len(l) <= 120 for l in lines), text
+        assert len(text) <= 260, text
+    check_in = next(t for t in sent if "Are you safe?" in t)
+    assert len(check_in) <= 90 and check_in.count("\n") <= 1

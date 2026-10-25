@@ -174,12 +174,8 @@ def _driver_check(trip):
                             "at": notify.now_iso(), "simulated": True}
     log("INFO", "driver_check", trip=trip["trip_id"], status=trip["driver_check"]["status"])
     if trip.get("wa_chat_id"):
-        d = trip["driver"]
-        notify.send_whatsapp(trip["wa_chat_id"], (
-            f"✅ Your driver {d['name']} unlocked the app with Face ID at the start of the ride."
-            if ok else
-            f"⚠️ Your driver {d['name']} has *not* been verified with Face ID for this ride. You decide: go ahead, "
-            "ask for another ride, or share your trip first.") + " (Simulated in the prototype.)")
+        notify.send_whatsapp(trip["wa_chat_id"], "✅ Driver verified with Face ID. (demo)" if ok else
+                             "⚠️ Driver NOT verified with Face ID. Your choice: ride, cancel, or share your trip. (demo)")
 
 
 def start_trip(trip_id):
@@ -194,7 +190,7 @@ def start_trip(trip_id):
 def complete_trip(trip_id):
     trip = update_trip(trip_id, status="completed", completed_at=notify.now_iso())
     if trip.get("wa_chat_id"):
-        notify.send_whatsapp(trip["wa_chat_id"], f"✅ Trip {trip['trip_id']} completed. Thanks for travelling safely with MzansiRide.")
+        notify.send_whatsapp(trip["wa_chat_id"], "✅ You've arrived. Trip complete.")
     return trip
 
 
@@ -304,8 +300,7 @@ def queue_whatsapp_prompt(trip, ev):
 
 def whatsapp_prompt_text(trip_id, event_id):
     trip, ev = get_trip(trip_id), get_event(trip_id, event_id)
-    ai = explain(trip_id, event_id, channel="whatsapp")
-    return notify.checkin_prompt(trip, ev, ai["text"])
+    return notify.checkin_prompt(trip, ev)  # short on purpose; the AI explains if they ask
 
 
 def explain(trip_id, event_id, channel="web"):
@@ -328,9 +323,8 @@ def _remind(trip, ev, left_s):
     store.put("events", ev)
     contact = (trip.get("trusted_contact") or {}).get("name") or "your trusted contact"
     if trip.get("wa_chat_id"):
-        notify.send_whatsapp(trip["wa_chat_id"], f"⏳ {notify.first_name(trip)}, are you OK? If we don't hear back in about "
-                                                 f"{max(1, round(left_s / 60))} min, we'll alert {contact} and our safety team.\n"
-                                                 "Reply *1* = safe, *2* = help, or tell me what's happening.")
+        notify.send_whatsapp(trip["wa_chat_id"], f"⏳ Are you safe? Reply *1* or *2*.\n"
+                                                 f"No reply in {max(1, round(left_s / 60))} min alerts {contact}.")
     log("INFO", "checkin_reminder", trip=trip["trip_id"], event_id=ev["event_id"])
     return ev
 
@@ -344,8 +338,8 @@ def _escalate(trip, ev, reason):
     store.put("events", ev)
     log("INFO", "event_escalated", trip=trip["trip_id"], event_id=ev["event_id"], reason=reason)
     if trip.get("wa_chat_id") and reason == "no_response":
-        notify.send_whatsapp(trip["wa_chat_id"], "We didn't hear back from you, so your trusted contact has been notified. "
-                                                 "Reply 1 if you are OK. In danger? Call 10111 or 112.")
+        contact = (trip.get("trusted_contact") or {}).get("name") or "your trusted contact"
+        notify.send_whatsapp(trip["wa_chat_id"], f"🚨 No reply, so {contact} was alerted.\nReply *1* if you're safe. Danger? Call 10111.")
     return ev
 
 
@@ -371,6 +365,15 @@ def checkin(trip_id, event_id, response, channel="web", prompt_ms=None, reply=No
         store.put("events", ev)
     elif ev["status"] != "escalated":
         _escalate(trip, ev, "passenger_help")
+    elif ev.get("escalation_reason") != "passenger_help" and not ev.get("help_requested_at"):
+        # Already escalated for no reply, and now the passenger actively asks for help: tell the contact
+        # again (it's new, more urgent information) and refresh the operator's triage.
+        ev["help_requested_at"] = notify.now_iso()
+        ev.setdefault("notifications", []).append(notify.notify_trusted_contact(trip, ev, "passenger_help"))
+        ev["triage"] = assistant.triage(trip, ev, "passenger_help")
+        ev.pop("operator_ack", None)
+        store.put("events", ev)
+        log("INFO", "help_after_escalation", trip=trip["trip_id"], event_id=ev["event_id"])
     else:
         store.put("events", ev)
     if trip.get("wa_chat_id"):

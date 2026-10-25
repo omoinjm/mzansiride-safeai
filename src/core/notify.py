@@ -80,32 +80,29 @@ def sim_outbox_pop(chat_id):
     return item.get("messages") or []
 
 
-REASONS = {
-    "passenger_help": "asked for help",
-    "no_response": "did not respond to a safety check-in",
+CONTACT_LEAD = {
+    "passenger_help": "asked for HELP",
+    "no_response": "did not answer a safety check-in",
     "passenger_sos": "sent an SOS",
     "share_trip": "shared their trip with you",
 }
 
 
 def contact_message(trip, event, reason):
+    """Short and actionable: who, what, which car, where, what to do."""
     d = trip.get("driver") or {}
     pos = (event or {}).get("lat"), (event or {}).get("lng")
     if pos[0] is None and trip.get("last_position"):
         pos = trip["last_position"].get("lat"), trip["last_position"].get("lng")
     where = f"https://maps.google.com/?q={pos[0]:.5f},{pos[1]:.5f}" if pos[0] is not None else "unknown"
-    what = ""
-    if event and event.get("type") in ("PROLONGED_STOP", "ROUTE_DEVIATION"):
-        from .rules import describe
-
-        what = f"\nAlert: {describe(event)}"
-    return (
-        f"🚨 *MzansiRide SafeAI* (DEMO)\n{trip.get('passenger_name', 'A passenger')} {REASONS.get(reason, reason)} "
-        f"on trip {trip['trip_id']} ({trip.get('pickup_name')} → {trip.get('destination_name')}).{what}\n"
-        f"Driver: {d.get('name')}, {d.get('colour', '')} {d.get('vehicle', '')} {d.get('plate', '')}\n"
-        f"Last known location: {where}\n"
-        "Please try to contact them. If you believe they are in danger, call SAPS on 10111 or 112."
-    )
+    name = trip.get("passenger_name", "A passenger")
+    if reason == "share_trip":
+        return (f"📍 {name} shared a trip with you: {trip.get('pickup_name')} → {trip.get('destination_name')}.\n"
+                f"Car: {d.get('plate')} ({d.get('colour', '')} {d.get('vehicle', '')})\nLive: {where}")
+    return (f"🚨 *{name} {CONTACT_LEAD.get(reason, reason)}* on a ride.\n"
+            f"Car: *{d.get('plate')}*, {d.get('colour', '')} {d.get('vehicle', '')} ({d.get('name')})\n"
+            f"Last seen: {where}\n"
+            "Call them now. If you think they're in danger, call 10111. (MzansiRide demo)")
 
 
 def notify_trusted_contact(trip, event, reason):
@@ -132,8 +129,8 @@ def notify_trusted_contact(trip, event, reason):
 
 
 NOTICED = {
-    "PROLONGED_STOP": "has stopped for a while",
-    "ROUTE_DEVIATION": "has left the planned route",
+    "PROLONGED_STOP": "has stopped",
+    "ROUTE_DEVIATION": "has left the route",
 }
 
 
@@ -142,23 +139,16 @@ def first_name(trip):
     return name[0] if name and name[0] != "Passenger" else "there"
 
 
-def checkin_prompt(trip, event, explanation):
-    return (
-        f"⚠️ Hi {first_name(trip)}, we noticed your trip to {trip.get('destination_name')} "
-        f"{NOTICED.get(event.get('type'), 'looks unusual')}. *Are you safe?*\n\n{explanation}\n\n"
-        "Reply *1* = YES, I'm OK\nReply *2* = HELP (alerts your trusted contact)\nOr just tell me what's happening.\n"
-        f"Trip {trip['trip_id']}. In danger? Call 10111 or 112."
-    )
+def checkin_prompt(trip, event, explanation=None):
+    """The WhatsApp check-in: one question, two answers. Readable in two seconds."""
+    return (f"⚠️ {first_name(trip)}, your trip {NOTICED.get(event.get('type'), 'looks unusual')}. *Are you safe?*\n"
+            "Reply *1* = Safe   *2* = Help")
 
 
 def welcome_message(trip):
     d = trip.get("driver") or {}
-    return (
-        f"👋 Hi {first_name(trip)}, Safe Journey Mode is on for your trip {trip['trip_id']} to "
-        f"{trip.get('destination_name')}.\nDriver: {d.get('name')}, {d.get('colour', '')} {d.get('vehicle', '')} "
-        f"*{d.get('plate', '')}*.\nIf the trip stops unexpectedly or leaves the route, we'll check in with you here. "
-        "No app or mobile data needed. (Prototype: simulated trip.)"
-    )
+    return (f"✅ Safe Journey is on: {trip.get('destination_name')}, car *{d.get('plate', '')}*.\n"
+            "If anything looks wrong, we'll message you here.")
 
 
 def epoch():

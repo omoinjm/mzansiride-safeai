@@ -41,8 +41,10 @@ Rules you must always follow:
 </approved_guidance>"""
 
 CHANNEL_STYLE = {
-    "web": "Format: at most 120 words. Use short paragraphs or up to 4 bullet points. Markdown bold is allowed.",
-    "whatsapp": "Format: this is a WhatsApp message. At most 90 words, plain text, use *single asterisks* for bold, no markdown headings or links.",
+    "web": "Format: at most 60 words. Start with the single most important action in bold, then up to 3 short bullet "
+           "points. Markdown bold is allowed. The reader may be scared and in a moving car: be brief.",
+    "whatsapp": "Format: a WhatsApp message of at most 35 words, in 1 to 3 short lines. Start with the most important "
+                "action. Plain text, *single asterisks* for bold, no headings, lists or links. The reader may be scared: be brief.",
 }
 
 _client = None

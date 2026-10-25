@@ -144,9 +144,9 @@ def test_whatsapp_link_prompt_and_reply(aws):
     stop_for(tid, 200)
     status, out = call("GET", "/api/whatsapp/outbox", qs={"session": "test1"})
     assert len(out["messages"]) == 2 and "Face ID" in out["messages"][0]["text"]
-    assert "Reply *1*" in out["messages"][1]["text"] and "AI says (whatsapp)" in out["messages"][1]["text"]
-    assert "trusted contact" in wa("help").lower()  # "help" during an open check-in escalates
-    assert "no open check-in" in wa("1")
+    assert "Reply *1*" in out["messages"][1]["text"]
+    assert "alerting mom" in wa("help").lower()  # "help" during an open check-in escalates
+    assert "No open check-in" in wa("1")
 
 
 def test_whatsapp_free_text_goes_to_ai(aws):

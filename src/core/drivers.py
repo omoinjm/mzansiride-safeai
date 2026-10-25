@@ -80,20 +80,20 @@ def lookup(query):
     }
 
 
+WA_VERDICT = {
+    "registered": "✅ *Registered driver*: check the face and car match.",
+    "caution": "⚠️ *Caution: do not take this ride.* Cancel and book another.",
+    "not_found": "❔ *No record found*. Check the plate, car and driver match your booking.",
+    "invalid": "Send *CHECK* + plate, e.g. CHECK CA 123-456",
+}
+
+
 def format_lookup(result):
-    """Plain-text version for WhatsApp."""
-    head = {
-        "registered": "✅ *Registered driver*",
-        "caution": "⚠️ *Caution*",
-        "not_found": "❔ *No record found*",
-        "invalid": "ℹ️ *Check a driver*",
-    }[result["verdict"]]
-    lines = [head]
+    """WhatsApp version: verdict first, one line per match. (Demo registry, not a police check.)"""
+    lines = [WA_VERDICT[result["verdict"]]]
     for d in result["matches"]:
-        lines.append(f"{d['name']}: {d['colour']} {d['vehicle']}, {d['plate']} (rating {d['rating']}, "
-                     f"{d['trips_completed']} trips, status: {d['status'].replace('_', ' ')})")
-    lines.append(result["advice"])
-    lines.append("_Demo registry: simulated records, not an official police check._")
+        lines.append(f"{d['name']}, {d['colour']} {d['vehicle']}, {d['plate']}")
+    lines.append("_(demo registry)_")
     return "\n".join(lines)
 
 
