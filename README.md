@@ -62,6 +62,9 @@ audit trail for regulators. A shared-ride fare comparison and a WhatsApp driver/
 | No-answer ladder | ✅ Completed | Operator-set wait window (Fleet page), reminder at half the window, then trusted contact + operator alert |
 | Plate photo check | ✅ Completed (app) / ⏳ WhatsApp | Bedrock reads the plate, registry lookup, photo not stored. WhatsApp photos only if OpenWA sends them inline |
 | Driver Face ID at start of ride | 🧪 Simulated | Driver card, WhatsApp and triage show Verified / Not verified. Real biometrics are Phase 2 |
+| Waze / Google Maps roads not flagged | ✅ Completed | 35 OSRM alternative roads (`scripts/fetch_routes.py`); off every road but closing on the destination needs 500 m / 4 readings |
+| Regular-trip budget | ✅ Completed | Fare comparison per week / month / year, alone vs shared |
+| Ask AI button + installable web app | ✅ Completed | Floating assistant button on every page; PWA manifest + icons (Add to Home Screen) |
 | Trusted-contact notification | 🧪 Simulated / ✅ real for allow-listed numbers | Real WhatsApp send via OpenWA only to `wa_allowlist` |
 | Individual vs shared fare comparison | ✅ Completed | Illustrative pricing rules |
 | AWS-backed workflow | ✅ Completed | Terraform, CI/CD, monitoring |

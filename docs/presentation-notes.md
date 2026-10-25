@@ -119,6 +119,17 @@ Show the **About** page list. Say it plainly:
 - **Simulated:** trip positions and speed (no live GPS), the demo fleet, drivers, vehicles and safety scores (demo registry), notifications and operator actions such as "Escalated to SAPS" (real WhatsApp only for our allow-listed numbers).
 - **Outstanding / next:** Cognito accounts, live GPS with Amazon Location Service, multilingual assistant (isiZulu, Sesotho, Afrikaans), official WhatsApp Business API (AWS End User Messaging Social) to replace OpenWA, and operator partnerships for verified drivers and emergency response.
 
+## Business model: "How it pays for itself" (A, 0:45, slide after "Safer and more affordable")
+- "Passengers ride free. Our users are price-sensitive, so safety can't be a premium extra."
+- "Operators pay a small fee per monitored trip and earn the 'MzansiRide Safe' badge: fewer incidents, faster response and an audit trail for regulators and insurers."
+- "Partners grow it: universities and employers for student and staff transport, insurers, taxi associations and fleet owners."
+- "It runs for cents a trip on AWS, because it's serverless and the AI is only called when an alert fires."
+- If asked "what would you do with funding?": "A pilot with one operator or a campus shuttle, the official WhatsApp API, a POPIA assessment, and isiZulu, Sesotho and Afrikaans."
+- These are the team's draft figures: agree the wording together before Monday.
+
+## Waze / Google Maps question (likely)
+"Drivers follow their own navigation app, so we know the other sensible roads between two places and don't flag them. If the car is on an unknown road but still closing in on the destination, we give it more leeway before asking. In production the driver app would share the route it's actually navigating." Demo: book **Wits → Sandton**, start, press **Simulate driver's own route (Waze)**: no alert.
+
 ## 9. Close (A, 1:00)
 "A panic button waits for the passenger to act. MzansiRide SafeAI doesn't wait. It watches the trip data, checks in on WhatsApp, even with no data bundle, acts for the passenger when they can't, and gives the operator's safety team a live fleet view with AI triage. We sell it to operators, so every passenger on their platform is protected. Thank you."
 
