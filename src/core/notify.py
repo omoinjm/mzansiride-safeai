@@ -15,7 +15,7 @@ import re
 import time
 from datetime import datetime, timezone
 
-from . import store
+from . import health, store
 from .log import log
 
 
@@ -147,6 +147,8 @@ def notify_trusted_contact(trip, event, reason):
         record.update(channel="whatsapp", status=status)
     else:
         record.update(channel="whatsapp", status="simulated")
+    kind = {"simulated": "simulated", "rate_limited": "rate_limited", "no_contact_set": "none"}.get(record["status"], "whatsapp")
+    health.record({f"contact_{kind}": 1})
     log("INFO", "contact_notified", trip=trip["trip_id"], reason=reason, status=record["status"],
         channel=record["channel"])
     return record

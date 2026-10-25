@@ -152,6 +152,36 @@ export type AppConfig = {
   region: string
 }
 
+export type Health = {
+  checked_at: string
+  whatsapp: {
+    status: 'ok' | 'degraded' | 'down' | 'not_configured'
+    advice: string
+    gateway: { ok: boolean; ms: number | null } | null
+    last_sent_at?: string
+    last_received_at?: string
+    last_error_at?: string
+    last_error?: string
+  }
+  ai: {
+    primary_model: string
+    fallback_model: string
+    last_model?: string
+    last_at?: string
+    calls_today: number
+    via_fallback_model: number
+    rules_fallback: number
+    status: 'ok' | 'degraded'
+  }
+  messages_today: Record<
+    | 'whatsapp_sent' | 'whatsapp_failed' | 'whatsapp_received'
+    | 'contact_alerts_whatsapp' | 'contact_alerts_simulated' | 'contact_alerts_rate_limited',
+    number
+  >
+  errors_last_hour: { api?: number; whatsapp?: number } | null
+  dashboard_url?: string
+}
+
 export type Dashboard = {
   fleet: FleetRow[]
   summary: {

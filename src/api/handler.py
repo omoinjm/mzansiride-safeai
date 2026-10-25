@@ -7,7 +7,7 @@ import re
 import time
 import traceback
 
-from core import assistant, commands, drivers, notify, places, trips
+from core import assistant, commands, drivers, health, notify, places, trips
 from core.log import log
 
 TEAM_CODE = os.environ.get("TEAM_CODE", "")
@@ -107,6 +107,11 @@ def photo_check(event, body):
     return result
 
 
+def ops_health(event, body):
+    _require_team_code(event)
+    return health.snapshot()
+
+
 def ops_config(event, body):
     _require_team_code(event)
     method = event["requestContext"]["http"]["method"]
@@ -144,6 +149,7 @@ ROUTES = [
     ("POST", r"/api/trips/(?P<trip>[A-Za-z0-9]+)/events/(?P<ev>[A-Za-z0-9_-]+)/reply",
      lambda e, b, trip, ev: trips.reply(trip.upper(), ev, b.get("text"), channel="web")),
     ("GET", r"/api/ops/config", ops_config),
+    ("GET", r"/api/ops/health", ops_health),
     ("PUT", r"/api/ops/config", ops_config),
     ("POST", r"/api/drivers/photo-check", photo_check),
     ("GET", r"/api/drivers/lookup", lambda e, b: drivers.lookup((e.get("queryStringParameters") or {}).get("q", ""))),

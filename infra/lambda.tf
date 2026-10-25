@@ -29,6 +29,8 @@ locals {
     GUARDRAIL_VERSION = var.enable_guardrail ? aws_bedrock_guardrail_version.safety[0].version : ""
     WHATSAPP_FUNCTION = var.enable_whatsapp ? local.wa_name : ""
     WA_NUMBER         = var.wa_number
+    OPENWA_HEALTH_URL = var.enable_whatsapp ? "https://${local.wa_host}/api/health" : ""
+    DASHBOARD_URL     = local.dashboard_url
   }
 }
 

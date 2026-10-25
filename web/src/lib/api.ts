@@ -1,5 +1,5 @@
 import type {
-  AiResult, AppConfig, CheckinReply, Dashboard, DriverLookup, PhotoCheck, Place, Quote, SafetyEvent, TelemetryResult, Trip,
+  AiResult, AppConfig, CheckinReply, Dashboard, Health, DriverLookup, PhotoCheck, Place, Quote, SafetyEvent, TelemetryResult, Trip,
 } from './types'
 
 export class ApiError extends Error {
@@ -58,6 +58,7 @@ export const api = {
     req<AiResult>('POST', '/assistant', { message, trip_id, history }),
   waSimulate: (session: string, text: string) => req<{ replies: string[] }>('POST', '/whatsapp/simulate', { session, text }),
   waOutbox: (session: string) => req<{ messages: { text: string; at: string }[] }>('GET', `/whatsapp/outbox?session=${session}`),
+  health: (code: string) => req<Health>('GET', '/ops/health', undefined, { 'x-team-code': code }),
   dashboard: (code: string) => req<Dashboard>('GET', '/dashboard', undefined, { 'x-team-code': code }),
   ack: (code: string, id: string, ev: string, action: string) =>
     req<SafetyEvent>('POST', `/trips/${id}/events/${ev}/ack`, { action }, { 'x-team-code': code }),

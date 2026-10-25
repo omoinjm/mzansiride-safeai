@@ -63,6 +63,7 @@ test('fleet dashboard: demo fleet → unanswered check-in turns red with AI tria
   await page.goto('/dashboard')
   await page.getByPlaceholder('Team code').fill(TEAM_CODE)
   await page.getByRole('button', { name: 'Open dashboard' }).click()
+  await expect(page.getByRole('region', { name: 'System health' })).toBeVisible()
   await page.getByRole('button', { name: 'Run demo fleet' }).click()
   await expect(page.locator('[data-risk="green"]').first()).toBeVisible({ timeout: 20_000 })
   const red = page.locator('[data-risk="red"]', { hasText: 'Sarah' })

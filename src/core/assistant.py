@@ -13,7 +13,7 @@ import re
 import time
 from pathlib import Path
 
-from . import rules
+from . import health, rules
 from .log import log
 
 GUIDANCE = (Path(__file__).parent / "guidance.md").read_text()
@@ -80,10 +80,13 @@ def _converse(messages, channel, system=None, max_tokens=None, guard=True):
     models = [m for m in (MODEL_ID, MODEL_FALLBACK_ID) if m]
     for i, model in enumerate(models):
         try:
-            return _converse_with(model, messages, channel, system, max_tokens, guard)
+            out = _converse_with(model, messages, channel, system, max_tokens, guard)
+            health.record({"ai_calls": 1, "ai_via_fallback": int(i > 0)}, ai_last_model=model, ai_last_at=health._now())
+            return out
         except Exception as e:
             code = getattr(e, "response", {}).get("Error", {}).get("Code")
             if i == len(models) - 1 or code not in _MODEL_REFUSED:
+                health.record({"ai_calls": 1, "ai_errors": 1}, ai_last_error=code or type(e).__name__)
                 raise
             log("WARN", "bedrock_model_refused", model=model, code=code, error=str(e)[:200])
 

@@ -59,6 +59,13 @@ resource "aws_iam_role" "api" {
 data "aws_iam_policy_document" "api" {
   source_policy_documents = [data.aws_iam_policy_document.common.json]
 
+  # Health panel: Lambda error counts for the last hour (metrics reads can't be scoped to a resource).
+  statement {
+    sid       = "ReadErrorMetrics"
+    actions   = ["cloudwatch:GetMetricStatistics"]
+    resources = ["*"]
+  }
+
   statement {
     sid       = "Logs"
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]

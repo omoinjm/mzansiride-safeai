@@ -5,6 +5,7 @@ import { api, save, store } from '../lib/api'
 import { FleetDemo } from '../lib/fleet'
 import type { Dashboard, FleetRow, Risk, SafetyEvent } from '../lib/types'
 import FleetMap from '../components/FleetMap'
+import HealthPanel from '../components/HealthPanel'
 import { Pill, Section, SimBadge, Spinner } from '../components/ui'
 import { EVENT_LABEL, RISK_COLOUR, timeAgo } from '../lib/format'
 
@@ -150,6 +151,8 @@ export default function DashboardPage() {
       </div>
 
       <Fleet fleet={data.fleet} onAck={ack} log={demoLog} />
+
+      <HealthPanel code={code} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         {tiles.map(({ label, value, sub, icon: I }) => (

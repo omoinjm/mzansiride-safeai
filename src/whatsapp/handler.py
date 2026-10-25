@@ -16,7 +16,7 @@ import time
 
 import boto3
 
-from core import commands, drivers, notify, store, trips
+from core import commands, drivers, health, notify, store, trips
 from core.log import log
 from whatsapp import openwa
 
@@ -67,8 +67,10 @@ def _inline_image(data):
 def _send(chat_id, text):
     try:
         _remember_lid(chat_id, openwa.send_text(chat_id, text))
+        health.record({"wa_sent": 1}, wa_last_sent_at=health._now())
         log("INFO", "whatsapp_sent", chat=notify.mask(chat_id), chars=len(text))
     except Exception as e:
+        health.record({"wa_failed": 1}, wa_last_error_at=health._now(), wa_last_error=type(e).__name__ + ": " + str(e)[:100])
         log("ERROR", "whatsapp_send_failed", chat=notify.mask(chat_id), error=str(e)[:300])
         raise
 
@@ -141,6 +143,7 @@ def handle_webhook(event, context):
         InvocationType="Event",
         Payload=json.dumps({"action": "process", "chat_id": chat_id, "text": text or ""}).encode(),
     )
+    health.record({"wa_received": 1}, wa_last_inbound_at=health._now())
     log("INFO", "webhook_received", chat=notify.mask(chat_id), type=data.get("type"))
     return _ok()
 
