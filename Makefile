@@ -4,7 +4,7 @@ TF   := $(CREDS) terraform -chdir=infra
 PY   := .venv/bin/python
 REGION := eu-west-1
 
-.PHONY: help setup test web lint e2e local local-ai init plan deploy site url code logs logs-wa wa-setup wa-qr wa-status wa-dashboard destroy
+.PHONY: help setup test web lint e2e local local-ai init plan deploy site url code logs logs-wa wa-setup wa-qr wa-status wa-dashboard wa-restart destroy
 
 help:
 	@echo "setup      .venv + web/node_modules"
@@ -15,6 +15,7 @@ help:
 	@echo "deploy     tests -> terraform plan/apply -> upload site"
 	@echo "url/code   live URL / dashboard team code"
 	@echo "wa-setup   create the OpenWA session + webhook (once), wa-qr shows the QR to scan"
+	@echo "wa-restart restart OpenWA if WhatsApp sends hang (keeps the login)"
 	@echo "wa-dashboard  private tunnel to the OpenWA dashboard on http://localhost:2785 (scan the QR there)"
 	@echo "logs       tail API logs   logs-wa  tail WhatsApp logs"
 	@echo "destroy    tear everything down"
@@ -85,6 +86,9 @@ wa-status:
 
 wa-dashboard:
 	$(CREDS) ./scripts/openwa.sh dashboard
+
+wa-restart:
+	$(CREDS) ./scripts/openwa.sh restart
 
 destroy:
 	$(TF) destroy

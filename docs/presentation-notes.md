@@ -107,6 +107,7 @@ Before the demo, on the **Ride** page put the **spare-phone / teammate's number*
 ### If something goes wrong
 - The AI is slow: keep talking. The modal shows the alert immediately, and the explanation follows a few seconds later.
 - The AI shows "standard guidance shown": "That's our fallback. The safety flow never depends on the AI being up."
+- WhatsApp replies stop arriving: run `make wa-restart` (about 30 s, keeps the login), then try again.
 - WhatsApp is down or the account is restricted: use the **WhatsApp simulator** page, which runs the same backend code.
 - The Wi-Fi drops: run `make local` on the laptop, or use the screenshots in `docs/screenshots/`.
 

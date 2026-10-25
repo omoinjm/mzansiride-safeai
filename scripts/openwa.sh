@@ -5,6 +5,7 @@
 #   ./scripts/openwa.sh qr       fetch the pairing QR -> build/whatsapp-qr.png (scan: WhatsApp > Linked devices)
 #   ./scripts/openwa.sh status   session status
 #   ./scripts/openwa.sh logs     last OpenWA container logs
+#   ./scripts/openwa.sh restart  restart OpenWA if sends hang (the WhatsApp login is kept, no new QR)
 #   ./scripts/openwa.sh dashboard  SSM port-forward: OpenWA dashboard on http://localhost:2785 (never public)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -74,6 +75,9 @@ PY
     SID="$(session_id)"
     remote "$PRELUDE; api \$B/sessions/$SID; echo; curl -s -o /dev/null -w 'public TLS endpoint: %{http_code}\n' https://\$(curl -s ifconfig.me | tr . -).sslip.io/api/health"
     ;;
+  restart)
+    remote "docker restart openwa >/dev/null; for i in \$(seq 1 60); do sleep 3; docker logs --since 3m openwa 2>&1 | grep -q 'Session ready' && { echo \"Session ready after \$((i*3)) s\"; exit 0; }; done; echo 'Not ready after 3 min: check make wa-status'"
+    ;;
   dashboard)
     command -v session-manager-plugin >/dev/null || { echo "Install the AWS session-manager-plugin first" >&2; exit 1; }
     echo "OpenWA dashboard: http://localhost:2785/dashboard  (API key: aws ssm get-parameter --name ${PREFIX}api_key --with-decryption)"
@@ -84,5 +88,5 @@ PY
   logs)
     remote "docker logs --tail 80 openwa 2>&1; docker logs --tail 20 caddy 2>&1"
     ;;
-  *) echo "usage: $0 setup|qr|status|logs|dashboard"; exit 2 ;;
+  *) echo "usage: $0 setup|qr|status|logs|restart|dashboard"; exit 2 ;;
 esac
