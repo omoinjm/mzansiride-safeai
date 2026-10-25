@@ -22,6 +22,8 @@ audit trail for regulators. A shared-ride fare comparison and a WhatsApp driver/
 
 ![Architecture](docs/architecture.png)
 
+Deeper dive: [architecture, trade-offs and scaling](docs/architecture-and-scaling.md).
+
 <details open>
 <summary>The same architecture as a Mermaid diagram (rendered by GitHub, editable as text)</summary>
 
