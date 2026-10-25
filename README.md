@@ -37,21 +37,21 @@ flowchart LR
         SIM["Journey simulator in the browser<br/>replays real OSM roads · SIMULATED"]
     end
 
-    subgraph edge["Edge (AWS)"]
+    subgraph edge["Edge"]
         direction TB
         CF["Amazon CloudFront<br/>HTTPS · SA edge locations"]
         S3["Amazon S3<br/>private SPA bucket (OAC)"]
         EC2["Amazon EC2 · OpenWA<br/>WhatsApp gateway · Caddy TLS"]
     end
 
-    subgraph compute["API and compute (AWS)"]
+    subgraph compute["API and compute"]
         direction TB
         APIGW["API Gateway (HTTP)<br/>/api/* · /whatsapp/webhook"]
         LAPI["Lambda · api<br/>rules engine · check-ins<br/>no-answer ladder · fleet view"]
         LWA["Lambda · whatsapp<br/>HMAC verify · dedupe · replies"]
     end
 
-    subgraph data["AI, data, ops (AWS)"]
+    subgraph data["Data and AI"]
         direction TB
         BR["Amazon Bedrock<br/>Claude Haiku 5.5 · Nova Lite fallback<br/>Guardrails"]
         DDB[("DynamoDB<br/>trips · events · drivers · whatsapp")]
