@@ -66,7 +66,8 @@ if not url.startswith("data:image"):
 open("build/whatsapp-qr.png", "wb").write(base64.b64decode(url.split(",", 1)[1]))
 print("Saved build/whatsapp-qr.png: WhatsApp > Settings > Linked devices > Link a device")
 PY
-    command -v explorer.exe >/dev/null && explorer.exe "$(wslpath -w build/whatsapp-qr.png)" || true
+    # WSL: print the Windows path to open (launching explorer.exe fails when WSL interop is off)
+    command -v wslpath >/dev/null && echo "Open in Windows: $(wslpath -w build/whatsapp-qr.png)" || true
     ;;
   status)
     SID="$(session_id)"
