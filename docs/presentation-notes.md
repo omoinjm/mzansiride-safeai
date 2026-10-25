@@ -93,11 +93,12 @@ Before the demo, on the **Ride** page put the **spare-phone / teammate's number*
 |---|---|---|
 | 0:00 | **Ride**: *Rosebank Gautrain* → *Sandton City*. Point at the fares. | "Meet Thandi, going from Rosebank to Sandton. Individual R67.50, or share with two others and pay R40.50, 40% less." |
 | 0:15 | Name *Thandi*, her WhatsApp number, trusted contact *Mom*, Safe Journey ✔, **Request**. Show the phone. | "She gives us her WhatsApp number, nothing else to install. She's already got a WhatsApp message with her driver and plate." |
-| 0:35 | **Check plate in registry**. | "She checks the plate against the registry: registered, safety score 94." |
+| 0:35 | **Check plate from a photo** (photograph the driver card plate on screen, or a printed plate), then **Start trip**: the card shows the Face ID result. | "She photographs the plate. Bedrock reads it and checks our registry. And when the ride starts, the driver's Face ID result shows here. That part is simulated in the prototype." |
 | 0:45 | **Start trip**, **30× speed**. | "This is a simulated trip on real Joburg roads. The car sends its position and speed every few seconds, and our rules engine in Lambda checks every reading." |
 | 1:00 | **Simulate off-route**, then **Simulate prolonged stop**. | "The car leaves the route… and stops." |
 | 1:10 | Point at the phone: the check-in arrives. **Don't answer it.** | "Without Thandi pressing anything, she gets: *Hi Thandi, we noticed your trip to Sandton has left the planned route. Are you safe? Reply 1 for YES, 2 for HELP.* The explanation comes from Amazon Bedrock." |
-| 1:30 | Wait ~4 s (2 min of trip time). The safety log shows *escalated*. | "She doesn't answer. Maybe she can't. So the system acts for her: her mom is alerted with the driver, plate and location." |
+| 1:20 | *(Optional, if time)* On the first alert reply on WhatsApp in words: "we took a detour, still going to Sandton". | "She can answer in her own words. The AI understood it was a detour and closed the alert. If it isn't sure, it asks again; it never assumes she's OK." Then trigger the stop and don't answer. |
+| 1:30 | Wait ~4 s (2 min of trip time; a reminder arrives at half). The safety log shows *escalated*. | "She doesn't answer. Maybe she can't. So the system acts for her: her mom is alerted with the driver, plate and location." |
 | 1:50 | **Fleet** page (team code already saved). | "This is the product the operator buys. Every live trip. Thandi's is flashing red…" |
 | 2:00 | Read the **AI triage** sentence aloud. Click **Called driver**. | "…and Bedrock has written the next action for the fleet manager. The operator takes ownership with one click, and it's logged." |
 | 2:20 | **Run demo fleet**. Let it run 20 s. | "Here's what it looks like with a fleet. Most trips are green. Thabo's car leaves the route, amber, he replies *I'm OK*, back to green. Sarah's car stops off-route and she doesn't answer: red, with triage." |
@@ -107,6 +108,7 @@ Before the demo, on the **Ride** page put the **spare-phone / teammate's number*
 ### If something goes wrong
 - The AI is slow: keep talking. The modal shows the alert immediately, and the explanation follows a few seconds later.
 - The AI shows "standard guidance shown": "That's our fallback. The safety flow never depends on the AI being up."
+- Plate photo isn't read: say "the photo check needs a clear shot", then use *Check plate in registry*. On WhatsApp the bot says photos are coming; type `CHECK <plate>`.
 - WhatsApp replies stop arriving: run `make wa-restart` (about 30 s, keeps the login), then try again.
 - WhatsApp is down or the account is restricted: use the **WhatsApp simulator** page, which runs the same backend code.
 - The Wi-Fi drops: run `make local` on the laptop, or use the screenshots in `docs/screenshots/`.

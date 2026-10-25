@@ -58,6 +58,10 @@ audit trail for regulators. A shared-ride fare comparison and a WhatsApp driver/
 | Alert dashboard → **Fleet safety dashboard** | ✅ Completed | Live fleet map + list (green/amber/red), speed, AI triage, operator acknowledge, demo fleet. Team-code protected |
 | AI triage for the operator (repositioning) | ✅ Completed | Bedrock one-sentence next action on every escalation; rules-based fallback |
 | Proactive WhatsApp check-ins (repositioning) | ✅ Completed | Passenger number at booking, personalised prompt, no TRIP code needed |
+| Check-in replies in your own words | ✅ Completed | Bedrock classifies OK / help / unclear; danger words escalate without AI; unclear asks again, never closes |
+| No-answer ladder | ✅ Completed | Operator-set wait window (Fleet page), reminder at half the window, then trusted contact + operator alert |
+| Plate photo check | ✅ Completed (app) / ⏳ WhatsApp | Bedrock reads the plate, registry lookup, photo not stored. WhatsApp photos only if OpenWA sends them inline |
+| Driver Face ID at start of ride | 🧪 Simulated | Driver card, WhatsApp and triage show Verified / Not verified. Real biometrics are Phase 2 |
 | Trusted-contact notification | 🧪 Simulated / ✅ real for allow-listed numbers | Real WhatsApp send via OpenWA only to `wa_allowlist` |
 | Individual vs shared fare comparison | ✅ Completed | Illustrative pricing rules |
 | AWS-backed workflow | ✅ Completed | Terraform, CI/CD, monitoring |
