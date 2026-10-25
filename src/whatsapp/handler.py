@@ -61,7 +61,7 @@ def handle_webhook(event, context):
     payload = json.loads(raw_bytes or b"{}")
     if payload.get("event") != "message.received":
         if payload.get("event", "").startswith("session."):
-            log("INFO", "openwa_session", event=payload.get("event"), status=(payload.get("data") or {}).get("status"))
+            log("INFO", "openwa_session", kind=payload.get("event"), status=(payload.get("data") or {}).get("status"))
         return _ok()
     data = payload.get("data") or {}
     if data.get("fromMe") or data.get("isGroup") or data.get("kind", "individual") != "individual":

@@ -41,5 +41,6 @@ def send_text(chat_id: str, text: str) -> dict:
         headers={"Content-Type": "application/json", "X-API-Key": p["api_key"]},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=15) as r:
+    # OpenWA can take 30 s+ while WhatsApp Web is busy (e.g. syncing after login); the Lambda allows 60 s.
+    with urllib.request.urlopen(req, timeout=40) as r:
         return json.loads(r.read() or b"{}")

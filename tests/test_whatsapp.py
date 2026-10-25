@@ -42,6 +42,10 @@ def test_webhook_flow(aws, monkeypatch):
     assert handler.handler(_webhook(msg), Ctx())["statusCode"] == 200  # retry: deduplicated
     assert invoked == [{"action": "process", "chat_id": "27821234567@c.us", "text": "hi"}]
 
+    status = {"event": "session.status", "data": {"status": "ready"}}
+    assert handler.handler(_webhook(status), Ctx())["statusCode"] == 200  # acknowledged, not processed
+    assert len(invoked) == 1
+
     own = {**msg, "idempotencyKey": "k2", "data": {**msg["data"], "fromMe": True}}
     handler.handler(_webhook(own), Ctx())
     assert len(invoked) == 1

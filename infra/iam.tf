@@ -87,9 +87,13 @@ data "aws_iam_policy_document" "whatsapp" {
 
   # OpenWA base URL, API key, session id and webhook secret (SecureString, AWS-managed key).
   statement {
-    sid       = "OpenWASecrets"
-    actions   = ["ssm:GetParametersByPath"]
-    resources = ["arn:aws:ssm:${var.region}:${local.account_id}:parameter${trimsuffix(local.openwa_prefix, "/")}"]
+    sid     = "OpenWASecrets"
+    actions = ["ssm:GetParametersByPath"]
+    # GetParametersByPath is authorised against the path exactly as requested (the code passes the trailing "/").
+    resources = [
+      "arn:aws:ssm:${var.region}:${local.account_id}:parameter${trimsuffix(local.openwa_prefix, "/")}",
+      "arn:aws:ssm:${var.region}:${local.account_id}:parameter${local.openwa_prefix}",
+    ]
   }
 }
 

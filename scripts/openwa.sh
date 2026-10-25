@@ -5,6 +5,7 @@
 #   ./scripts/openwa.sh qr       fetch the pairing QR -> build/whatsapp-qr.png (scan: WhatsApp > Linked devices)
 #   ./scripts/openwa.sh status   session status
 #   ./scripts/openwa.sh logs     last OpenWA container logs
+#   ./scripts/openwa.sh dashboard  SSM port-forward: OpenWA dashboard on http://localhost:2785 (never public)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REGION="${REGION:-eu-west-1}"
@@ -73,8 +74,15 @@ PY
     SID="$(session_id)"
     remote "$PRELUDE; api \$B/sessions/$SID; echo; curl -s -o /dev/null -w 'public TLS endpoint: %{http_code}\n' https://\$(curl -s ifconfig.me | tr . -).sslip.io/api/health"
     ;;
+  dashboard)
+    command -v session-manager-plugin >/dev/null || { echo "Install the AWS session-manager-plugin first" >&2; exit 1; }
+    echo "OpenWA dashboard: http://localhost:2785/dashboard  (API key: aws ssm get-parameter --name ${PREFIX}api_key --with-decryption)"
+    echo "Ctrl+C to close the tunnel."
+    aws ssm start-session --region "$REGION" --target "$INSTANCE" --document-name AWS-StartPortForwardingSession \
+      --parameters portNumber=2785,localPortNumber=2785
+    ;;
   logs)
     remote "docker logs --tail 80 openwa 2>&1; docker logs --tail 20 caddy 2>&1"
     ;;
-  *) echo "usage: $0 setup|qr|status|logs"; exit 2 ;;
+  *) echo "usage: $0 setup|qr|status|logs|dashboard"; exit 2 ;;
 esac
