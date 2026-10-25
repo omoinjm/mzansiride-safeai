@@ -1,4 +1,6 @@
-import type { SafetyEvent } from './types'
+import type { Risk, SafetyEvent } from './types'
+
+export const RISK_COLOUR: Record<Risk, string> = { red: '#dc2626', amber: '#d97706', handled: '#2563eb', green: '#059669' }
 
 export const EVENT_LABEL: Record<string, string> = {
   PROLONGED_STOP: 'Prolonged stop',

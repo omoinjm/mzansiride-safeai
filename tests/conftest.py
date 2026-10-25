@@ -34,7 +34,7 @@ def aws(monkeypatch):
             store.put("drivers", d)
 
         calls = []
-        def fake_converse(messages, channel):
+        def fake_converse(messages, channel, **kw):
             calls.append({"messages": messages, "channel": channel})
             return {"text": f"AI says ({channel})", "source": "bedrock", "model": "test-model"}
         monkeypatch.setattr(assistant, "_converse", fake_converse)

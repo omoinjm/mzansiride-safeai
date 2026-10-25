@@ -72,11 +72,11 @@ def _trip_context(trip):
     )
 
 
-def _converse(messages, channel):
+def _converse(messages, channel, system=None, max_tokens=None):
     models = [m for m in (MODEL_ID, MODEL_FALLBACK_ID) if m]
     for i, model in enumerate(models):
         try:
-            return _converse_with(model, messages, channel)
+            return _converse_with(model, messages, channel, system, max_tokens)
         except Exception as e:
             code = getattr(e, "response", {}).get("Error", {}).get("Code")
             if i == len(models) - 1 or code not in _MODEL_REFUSED:
@@ -84,12 +84,13 @@ def _converse(messages, channel):
             log("WARN", "bedrock_model_refused", model=model, code=code, error=str(e)[:200])
 
 
-def _converse_with(model, messages, channel):
+def _converse_with(model, messages, channel, system=None, max_tokens=None):
     kwargs = {
         "modelId": model,
-        "system": [{"text": SYSTEM_PROMPT}, {"text": CHANNEL_STYLE.get(channel, CHANNEL_STYLE["web"])}],
+        "system": [{"text": system}] if system else
+        [{"text": SYSTEM_PROMPT}, {"text": CHANNEL_STYLE.get(channel, CHANNEL_STYLE["web"])}],
         "messages": messages,
-        "inferenceConfig": {"maxTokens": MAX_TOKENS, "temperature": 0.2},
+        "inferenceConfig": {"maxTokens": max_tokens or MAX_TOKENS, "temperature": 0.2},
     }
     if os.environ.get("GUARDRAIL_ID"):
         kwargs["guardrailConfig"] = {
@@ -127,6 +128,50 @@ def explain_event(event, trip=None, channel="web"):
     except Exception as e:  # never let the AI break the safety workflow
         log("WARN", "bedrock_fallback", error=str(e)[:300], kind="explain")
         return {"text": fallback_explanation(event), "source": "fallback", "model": None}
+
+
+TRIAGE_PROMPT = """You are the fleet safety AI for MzansiRide SafeAI, an e-hailing operator's safety dashboard in South Africa.
+Write ONE sentence (at most 30 words) telling the fleet manager what to do next about this trip.
+Rules: start with the trip code; state the facts neutrally; recommend a concrete operator action (call the passenger,
+call the driver, contact the trusted contact, escalate to SAPS on 10111 if the passenger is unreachable or asked for help).
+Never accuse the driver or speculate about crime. The safety score is context, not evidence. Plain text only."""
+
+TRIAGE_REASONS = {
+    "passenger_help": "the passenger replied that they need help",
+    "no_response": "the passenger did not answer the check-in",
+    "passenger_sos": "the passenger pressed SOS",
+}
+
+
+def _triage_facts(trip, event, reason):
+    d = trip.get("driver") or {}
+    pos = trip.get("last_position") or {}
+    return (
+        f"Trip {trip['trip_id']} ({trip.get('pickup_name')} to {trip.get('destination_name')}). "
+        f"Alert: {rules.describe(event) if event.get('type') in ('PROLONGED_STOP', 'ROUTE_DEVIATION') else event.get('type')}. "
+        f"Escalated because {TRIAGE_REASONS.get(reason, reason)}. "
+        f"Check-in channel: {'WhatsApp' if trip.get('wa_chat_id') else 'app only'}. "
+        f"Driver {d.get('name')}, safety score {d.get('safety_score', 'n/a')}/100, rating {d.get('rating')}, "
+        f"registry status {d.get('status')}. Last speed {pos.get('speed_kmh', 'unknown')} km/h. "
+        f"Trusted contact {'notified' if trip.get('trusted_contact') else 'not set'}."
+    )
+
+
+def fallback_triage(trip, event, reason):
+    what = rules.describe(event) if event.get("type") in ("PROLONGED_STOP", "ROUTE_DEVIATION") else "SOS received."
+    return (f"Trip {trip['trip_id']}: {what.rstrip('.')}; {TRIAGE_REASONS.get(reason, reason)}. "
+            "Call the passenger and driver now; if unreachable, escalate to SAPS (10111).")
+
+
+def triage(trip, event, reason):
+    """One-sentence next action for the operator when an alert escalates (shown on the fleet dashboard)."""
+    facts = _triage_facts(trip, event, reason)
+    try:
+        return _converse([{"role": "user", "content": [{"text": facts}]}], "triage",
+                         system=TRIAGE_PROMPT, max_tokens=120)
+    except Exception as e:
+        log("WARN", "bedrock_fallback", error=str(e)[:300], kind="triage")
+        return {"text": fallback_triage(trip, event, reason), "source": "fallback", "model": None}
 
 
 def chat(message, trip=None, history=None, channel="web"):

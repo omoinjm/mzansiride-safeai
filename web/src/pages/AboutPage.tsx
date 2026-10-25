@@ -3,12 +3,15 @@ import { CheckCircle2, CircleDashed, FlaskConical } from 'lucide-react'
 type Status = 'done' | 'simulated' | 'outstanding'
 const FEATURES: [string, Status, string][] = [
   ['Responsive booking interface', 'done', 'React + TypeScript + Tailwind, works on phone and desktop'],
-  ['Driver and vehicle details', 'simulated', 'Demo drivers from the DynamoDB registry, clearly labelled "not verified"'],
+  ['Driver and vehicle details', 'simulated', 'Demo drivers from the DynamoDB registry with an illustrative safety score, labelled "not verified"'],
   ['Safe Journey Mode + journey screen', 'done', 'Map, trip clock, status, check-in state'],
   ['Prolonged-stop and route-deviation rules', 'done', 'Backend rules in Lambda, unit-tested; positions come from the simulator'],
   ['Passenger check-in prompt', 'done', "I'm OK / I need help, plus auto-escalation after 2 min without an answer"],
   ['AI safety assistant (Amazon Bedrock)', 'done', 'Claude via Bedrock with grounded guidance, a Guardrail and a rules-based fallback'],
-  ['Safety alert dashboard', 'done', 'Trips, events, responses, notifications and time to prompt'],
+  ['Fleet safety dashboard (operator)', 'done', 'Live fleet map and list: green / amber / red per trip, speed, AI triage, operator acknowledge'],
+  ['AI triage for the operator', 'done', 'When an alert escalates, Bedrock writes a one-sentence next action for the fleet manager (rules-based text if the AI is down)'],
+  ['Proactive WhatsApp check-ins', 'done', 'Passenger number at booking, no TRIP code needed. Real messages only for allow-listed demo numbers; others go to the simulator'],
+  ['Demo fleet + simulator panel', 'simulated', 'Normal drive / off-route / prolonged stop buttons, and a 5-car demo fleet with one scripted incident'],
   ['Trusted-contact notification', 'simulated', 'Recorded and shown. Real WhatsApp delivery only to allow-listed demo numbers'],
   ['Individual vs shared fare comparison', 'done', 'Illustrative pricing rules, no payments'],
   ['WhatsApp channel (OpenWA)', 'done', 'Driver check, trip link, check-ins, SOS and AI over WhatsApp, plus an in-browser simulator'],
@@ -30,7 +33,7 @@ const SERVICES = [
   ['Amazon CloudFront + S3', 'Hosts the React app over HTTPS from SA edge locations; the bucket is private (OAC).'],
   ['Amazon API Gateway (HTTP API)', 'One HTTPS entry point for the web API and the WhatsApp webhook; throttled.'],
   ['AWS Lambda (Python 3.13, arm64)', 'Trip workflow, safety rules, check-ins, notifications, WhatsApp commands.'],
-  ['Amazon Bedrock (Anthropic Claude)', 'Explains alerts and answers safety questions, grounded in approved guidance.'],
+  ['Amazon Bedrock (Claude Haiku 5.5, Nova Lite fallback)', 'Explains alerts to passengers, answers safety questions, and writes triage actions for the operator.'],
   ['Amazon Bedrock Guardrails', 'Filters harmful content and prompt attacks; denies profiling of drivers.'],
   ['Amazon DynamoDB', 'Trips, safety events, driver registry and WhatsApp chat links (on-demand, TTL).'],
   ['Amazon EC2 + SSM', 'Runs the open-source OpenWA WhatsApp gateway; admin via Systems Manager, with no SSH.'],
@@ -44,7 +47,7 @@ export default function AboutPage() {
       <div>
         <h1 className="text-2xl font-extrabold">About MzansiRide SafeAI</h1>
         <p className="mt-2 text-slate-700">
-          A safety-first, AI-powered ride-sharing prototype for South Africa, built for the AWS AI Hackathon 2026 (theme: AI for Real-World Impact). Passengers worried about GBV, kidnapping or travelling with unfamiliar drivers get journey check-ins, trusted-contact alerts and AI guidance in the app or on WhatsApp. It doesn't claim to prevent crime or guarantee safety.
+          A safety telemetry and intelligence layer for e-hailing operators in South Africa, built for the AWS AI Hackathon 2026 (theme: AI for Real-World Impact). Instead of a panic button the passenger must press in a crisis, the platform watches trip data, checks in with the passenger on WhatsApp, alerts their trusted contact, and gives the operator's safety team a live fleet view with AI triage. It doesn't claim to prevent crime or guarantee safety.
         </p>
       </div>
 

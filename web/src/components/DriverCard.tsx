@@ -29,6 +29,7 @@ export default function DriverCard({ driver }: { driver: Driver }) {
           </div>
           <p className="flex items-center gap-1 text-sm text-slate-600">
             <Star size={14} className="fill-gold-400 text-gold-400" /> {driver.rating.toFixed(1)} · {driver.trips_completed.toLocaleString('en-ZA')} trips · since {driver.registered_since}
+            {driver.safety_score != null && <> · safety score {driver.safety_score}/100</>}
           </p>
           <p className="mt-1 text-sm text-slate-700">
             {driver.colour} {driver.vehicle}

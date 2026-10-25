@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
 import {
-  Bell, CirclePause, CirclePlay, Clock, Flag, MessageCircle, Route as RouteIcon, Share2, Shield, ShieldAlert,
+  Bell, Car, CirclePause, CirclePlay, Clock, Flag, MessageCircle, Route as RouteIcon, Share2, Shield, ShieldAlert,
   ShieldCheck, Siren, Sparkles, UserRound,
 } from 'lucide-react'
 import { api, save } from '../lib/api'
@@ -190,6 +190,11 @@ export default function TripPage() {
               stepS={stepS}
               setStepS={setStepS}
               onPlay={() => setRunning((r) => !r)}
+              onNormal={() => {
+                sim.current?.resume()
+                setSnap(sim.current!.snapshot())
+                setRunning(true)
+              }}
               onStop={() => {
                 sim.current?.stop()
                 setSnap(sim.current!.snapshot())
@@ -199,10 +204,6 @@ export default function TripPage() {
                 sim.current?.deviate()
                 setSnap(sim.current!.snapshot())
                 setRunning(true)
-              }}
-              onResume={() => {
-                sim.current?.resume()
-                setSnap(sim.current!.snapshot())
               }}
               safe={trip.safe_mode}
             />
@@ -275,13 +276,13 @@ function DemoControls(props: {
   onPlay: () => void
   onStop: () => void
   onDeviate: () => void
-  onResume: () => void
+  onNormal: () => void
 }) {
   const { snap, running, stepS, safe } = props
   return (
-    <Section title="Demo controls" icon={<Flag size={18} className="text-amber-600" />} right={<SimBadge label="Simulation" />}>
+    <Section title="Simulator panel" icon={<Flag size={18} className="text-amber-600" />} right={<SimBadge label="Simulation" />}>
       <p className="mb-3 text-sm text-slate-600">
-        There's no live GPS in the prototype: the car follows the planned route on a trip clock ({stepS} s of trip time per second). Inject a scenario, and the backend rules decide whether to raise a check-in.
+        There's no live GPS in the prototype: the car follows the planned route on a trip clock ({stepS} s of trip time per second) and sends its position and speed to the backend. Inject a scenario, and the backend rules decide whether to raise a check-in. Tip: go off-route, then stop, for "stopped off-route".
       </p>
       <div className="mb-3 h-2 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full bg-brand-500 transition-all" style={{ width: `${Math.round(snap.progress * 100)}%` }} />
@@ -290,17 +291,15 @@ function DemoControls(props: {
         <button className="btn-secondary" onClick={props.onPlay}>
           {running ? <CirclePause size={16} /> : <CirclePlay size={16} />} {running ? 'Pause' : 'Play'}
         </button>
-        <button className="btn-secondary border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100" onClick={props.onStop} disabled={snap.mode !== 'driving'}>
-          <CirclePause size={16} /> Simulate prolonged stop
+        <button className="btn-secondary border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100" onClick={props.onNormal} disabled={snap.mode === 'driving' && running}>
+          <Car size={16} /> Simulate normal drive
         </button>
         <button className="btn-secondary border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100" onClick={props.onDeviate} disabled={snap.mode !== 'driving'}>
-          <RouteIcon size={16} /> Simulate route deviation
+          <RouteIcon size={16} /> Simulate off-route
         </button>
-        {(snap.mode === 'stopped' || snap.mode === 'detour') && (
-          <button className="btn-ghost" onClick={props.onResume}>
-            Resume normal driving
-          </button>
-        )}
+        <button className="btn-secondary border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100" onClick={props.onStop} disabled={snap.mode !== 'driving' && snap.mode !== 'detour'}>
+          <CirclePause size={16} /> Simulate prolonged stop
+        </button>
         <select className="input w-auto py-2" value={stepS} onChange={(e) => props.setStepS(Number(e.target.value))} aria-label="Simulation speed">
           <option value={15}>15× speed</option>
           <option value={30}>30× speed</option>
@@ -418,7 +417,21 @@ function WhatsAppLink({ trip, config }: { trip: Trip; config: AppConfig | null }
   return (
     <Section title="Check-ins on WhatsApp" icon={<MessageCircle size={18} className="text-emerald-600" />} right={trip.whatsapp_linked ? <Pill status="resolved_ok" /> : undefined}>
       {trip.whatsapp_linked ? (
-        <p className="text-sm text-emerald-800">Linked. Safety check-ins for this trip will also arrive on WhatsApp. Reply 1 (OK) or 2 (help).</p>
+        <p className="text-sm text-emerald-800">
+          {trip.whatsapp_channel === 'whatsapp'
+            ? `Linked to ${trip.passenger_phone ?? 'your WhatsApp'}. Check-ins arrive there automatically: reply 1 (safe) or 2 (help).`
+            : 'Linked. Safety check-ins for this trip also arrive on WhatsApp. Reply 1 (safe) or 2 (help).'}
+          {trip.whatsapp_channel === 'simulator' && (
+            <>
+              {' '}
+              Your number isn't on the demo allow-list, so they go to the{' '}
+              <Link to="/whatsapp" className="font-semibold underline">
+                WhatsApp simulator
+              </Link>
+              .
+            </>
+          )}
+        </p>
       ) : (
         <>
           <p className="text-sm text-slate-600">
@@ -470,6 +483,7 @@ function EventsTimeline({ events }: { events: SafetyEvent[] }) {
                 )}
                 {e.escalation_reason && <span>Escalated: {e.escalation_reason.replaceAll('_', ' ')}</span>}
                 {e.prompt_ms != null && <span>Prompt shown in {e.prompt_ms} ms</span>}
+                {e.triage && <span>Operator safety team alerted{e.operator_ack ? ` · ${e.operator_ack.action.toLowerCase()}` : ''}</span>}
               </div>
               {e.notifications?.map((n, i) => (
                 <div key={i} className="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 p-2 text-xs">

@@ -76,6 +76,6 @@ resource "aws_dynamodb_table_item" "driver" {
 
   item = jsonencode({
     # jsondecode() of a string on both branches avoids "inconsistent conditional result types"
-    for k, v in each.value : k => jsondecode(contains(["rating", "trips_completed", "reports_open"], k) ? jsonencode({ N = tostring(v) }) : jsonencode({ S = tostring(v) }))
+    for k, v in each.value : k => jsondecode(contains(["rating", "trips_completed", "reports_open", "safety_score"], k) ? jsonencode({ N = tostring(v) }) : jsonencode({ S = tostring(v) }))
   })
 }

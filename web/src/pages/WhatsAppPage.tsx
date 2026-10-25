@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
 import { CheckCheck, MessageCircle, Send, Smartphone, Wifi, WifiOff } from 'lucide-react'
-import { api, save, store } from '../lib/api'
+import { api, save, store, waSession } from '../lib/api'
 import type { AppConfig } from '../lib/types'
 import { RichText, SimBadge, Spinner } from '../components/ui'
 
@@ -20,11 +20,7 @@ const COMMANDS = [
 export default function WhatsAppPage() {
   const [params] = useSearchParams()
   const [config, setConfig] = useState<AppConfig | null>(null)
-  const [session] = useState(() => {
-    const s = store<string>('mz.waSession', '') || `web-${Math.random().toString(36).slice(2, 10)}`
-    save('mz.waSession', s)
-    return s
-  })
+  const [session] = useState(waSession)
   const [bubbles, setBubbles] = useState<Bubble[]>(() => store<Bubble[]>('mz.waChat', []))
   const [input, setInput] = useState(params.get('trip') ? `TRIP ${params.get('trip')}` : '')
   const [busy, setBusy] = useState(false)

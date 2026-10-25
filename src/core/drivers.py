@@ -36,7 +36,7 @@ def assign_driver(rng=random):
 
 def public(d):
     return {k: d[k] for k in ("driver_id", "name", "plate", "vehicle", "colour", "rating", "trips_completed",
-                              "registered_since", "status") if k in d}
+                              "registered_since", "status", "safety_score") if k in d}
 
 
 def lookup(query):

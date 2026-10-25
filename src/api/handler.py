@@ -88,6 +88,11 @@ def dashboard(event, body):
     return trips.dashboard()
 
 
+def acknowledge(event, body, trip, ev):
+    _require_team_code(event)
+    return trips.acknowledge(trip.upper(), ev, body.get("action"))
+
+
 ROUTES = [
     ("GET", r"/api/health", lambda e, b: {"ok": True, "service": "mzansiride-api"}),
     ("GET", r"/api/config", config),
@@ -110,6 +115,7 @@ ROUTES = [
      lambda e, b, trip, ev: trips.checkin(trip.upper(), ev, b.get("response"), channel="web", prompt_ms=b.get("prompt_ms"))),
     ("POST", r"/api/trips/(?P<trip>[A-Za-z0-9]+)/events/(?P<ev>[A-Za-z0-9_-]+)/explain",
      lambda e, b, trip, ev: trips.explain(trip.upper(), ev, channel="web")),
+    ("POST", r"/api/trips/(?P<trip>[A-Za-z0-9]+)/events/(?P<ev>[A-Za-z0-9_-]+)/ack", acknowledge),
     ("GET", r"/api/drivers/lookup", lambda e, b: drivers.lookup((e.get("queryStringParameters") or {}).get("q", ""))),
     ("POST", r"/api/assistant", assistant_chat),
     ("POST", r"/api/whatsapp/simulate", wa_simulate),

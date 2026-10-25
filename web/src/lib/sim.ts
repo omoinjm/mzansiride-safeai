@@ -88,8 +88,9 @@ export class Sim {
     return this.snapshot()
   }
 
+  /** Stops where the car is, also mid-detour ("stopped off-route"). */
   stop() {
-    if (this.mode === 'driving') {
+    if (this.mode === 'driving' || this.mode === 'detour') {
       this.mode = 'stopped'
       this.stoppedSince = this.ts
     }
@@ -112,7 +113,7 @@ export class Sim {
   }
 
   resume() {
-    if (this.mode === 'stopped') this.mode = 'driving'
+    if (this.mode === 'stopped') this.mode = this.offsetM ? 'returning' : 'driving'
     else if (this.mode === 'detour') this.mode = 'returning'
   }
 

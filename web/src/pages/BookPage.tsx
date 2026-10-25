@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ArrowDownUp, Car, MapPin, MessageCircle, ShieldCheck, Sparkles, UsersRound } from 'lucide-react'
-import { api, save, store } from '../lib/api'
+import { api, save, store, waSession } from '../lib/api'
 import type { Place, Quote } from '../lib/types'
 import FareCompare from '../components/FareCompare'
 import TripMap from '../components/TripMap'
@@ -18,6 +18,7 @@ export default function BookPage() {
   const [name, setName] = useState(store('mz.name', ''))
   const [contactName, setContactName] = useState(store('mz.contactName', ''))
   const [contactPhone, setContactPhone] = useState(store('mz.contactPhone', ''))
+  const [waPhone, setWaPhone] = useState(store('mz.waPhone', ''))
   const [safe, setSafe] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -43,6 +44,7 @@ export default function BookPage() {
     save('mz.name', name)
     save('mz.contactName', contactName)
     save('mz.contactPhone', contactPhone)
+    save('mz.waPhone', waPhone)
     try {
       const trip = await api.book({
         pickup,
@@ -51,6 +53,8 @@ export default function BookPage() {
         riders,
         safe_mode: safe,
         trusted_contact: contactPhone ? { name: contactName, phone: contactPhone } : undefined,
+        passenger_phone: waPhone || undefined,
+        wa_session: waPhone ? waSession() : undefined,
       })
       save('mz.trip', trip.trip_id)
       nav(`/trip/${trip.trip_id}`)
@@ -73,7 +77,7 @@ export default function BookPage() {
             <span className="text-gold-400">Someone's always checking in.</span>
           </h1>
           <p className="mt-3 max-w-xl text-brand-50">
-            Safe Journey Mode watches for unexpected stops and route changes, asks if you're OK, and alerts your trusted contact if you need help. AI explains what's happening and what you can do, in the app or on WhatsApp, even without mobile data.
+            You shouldn't have to press a panic button in a crisis. Safe Journey Mode watches the trip data for unexpected stops and route changes, checks in with you on WhatsApp (no mobile data needed), and alerts your trusted contact and the operator's safety team if you need help or don't answer.
           </p>
           <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs sm:max-w-md">
             {[
@@ -155,10 +159,21 @@ export default function BookPage() {
           )}
         </div>
 
-        <label className="block">
-          <span className="label">Your name</span>
-          <input className="input" placeholder="e.g. Thandi" value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="label">Your name</span>
+            <input className="input" placeholder="e.g. Thandi" value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="block">
+            <span className="label flex items-center gap-1">
+              <MessageCircle size={13} className="text-emerald-600" /> Your WhatsApp
+            </span>
+            <input className="input" placeholder="WhatsApp number" inputMode="tel" value={waPhone} onChange={(e) => setWaPhone(e.target.value)} />
+          </label>
+        </div>
+        <p className="-mt-2 text-[11px] text-slate-500">
+          Optional: we'll check in on WhatsApp if the trip looks unusual. Demo numbers get real messages; others go to the <a className="underline" href="/whatsapp">WhatsApp simulator</a>.
+        </p>
 
         <div className="rounded-xl border border-slate-200 p-3">
           <p className="label">Trusted contact (optional)</p>

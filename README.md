@@ -2,14 +2,19 @@
 
 # MzansiRide SafeAI
 
-**A safety-first, AI-powered ride-sharing prototype for South Africa.** Built for the AWS AI Hackathon 2026
+**A safety telemetry and intelligence layer for South African e-hailing operators.** Built for the AWS AI Hackathon 2026
 (theme: *AI for Real-World Impact*). Proposal: [`docs/MzansiRide SafeAI proposal.pdf`](docs/MzansiRide%20SafeAI%20proposal.pdf).
 
-Passengers who worry about GBV, kidnapping, or travelling with unfamiliar drivers turn on **Safe Journey Mode**.
-Backend rules watch for a **prolonged stop** or **route deviation** and ask the passenger to **check in**. **Amazon Bedrock**
-explains the alert in plain language using approved guidance. If the passenger asks for help, or doesn't answer, their
-**trusted contact** is alerted. The same features work **on WhatsApp** through the open-source OpenWA gateway, for people with
-WhatsApp bundles but no mobile data. A shared-ride fare comparison shows how sharing makes trips more affordable.
+**Proactive, not reactive.** A panic button asks the passenger to act during a crisis. Here, the trip's telemetry (position,
+speed, stops) goes through backend rules on every reading. A **prolonged stop** or **route deviation** triggers a
+**WhatsApp check-in** ("Hi Sarah, we noticed your trip to Sandton has left the planned route. Are you safe? Reply 1 for YES,
+2 for HELP"), which needs no app and no mobile data, only WhatsApp. **Amazon Bedrock** explains the alert in plain language.
+If the passenger asks for help or doesn't answer, the system acts for them: their **trusted contact** is alerted, and
+Bedrock writes a one-sentence **triage action** for the operator's safety team. The team watches the whole fleet on a live
+dashboard, with each trip green, amber or red.
+
+We sell to operators, not passengers: real-time risk telemetry, automated check-ins, faster incident handling, and an
+audit trail for regulators. A shared-ride fare comparison and a WhatsApp driver/plate check complete the passenger side.
 
 > Prototype: trips, drivers, vehicles, alerts and notifications are **simulated** and clearly labelled. It does not claim
 > to prevent crime or guarantee safety, and the AI does not replace emergency services (10111 / 112).
@@ -36,20 +41,23 @@ WhatsApp bundles but no mobile data. A shared-ride fare comparison shows how sha
 1. The browser **journey simulator** replays a real OSM road route and posts a position every second (`POST /api/trips/{id}/telemetry`, trip-time clock).
 2. `core/rules.py` (pure, unit-tested) flags `PROLONGED_STOP` (no movement for 3 min, away from pickup or destination) or `ROUTE_DEVIATION` (> 250 m from the route for 2 readings in a row). The event is stored as `awaiting_checkin`.
 3. The UI shows **"Are you OK?"**. `POST .../explain` asks Bedrock for a calm, neutral explanation (cached per event). If Bedrock fails, a rules-based text is shown, labelled as a fallback.
-4. **I'm OK** → `resolved_ok`. **I need help** → `escalated` + trusted contact notified. **No answer for 2 min of trip time** → escalated automatically.
-5. If the trip is linked to WhatsApp (`TRIP <code>`), the same prompt goes to WhatsApp, and replying `1`/`2` resolves it there.
+4. **I'm OK** → `resolved_ok`. **I need help** → `escalated` + trusted contact notified. **No answer for 2 min of trip time** → escalated automatically. Every escalation (and SOS) gets an **AI triage** sentence for the operator (`assistant.triage`, rules-based text if Bedrock is down).
+5. If the passenger gave their WhatsApp number when booking (or sent `TRIP <code>`), the same prompt goes to WhatsApp, and replying `1`/`2` resolves it there. Real messages go only to allow-listed numbers; other numbers are routed to the in-browser WhatsApp simulator.
+6. The **Fleet** dashboard shows every live trip: green (normal), amber (waiting for a check-in), red (escalated, nobody has picked it up), blue (operator handling). The operator acknowledges with one click ("Called driver"). **Run demo fleet** drives five simulated trips, one of which goes wrong.
 
 ## Status: completed, simulated and outstanding
 
 | Feature (proposal §8.1) | Status | Notes |
 |---|---|---|
 | Responsive booking interface | ✅ Completed | React 19 + TS + Tailwind 4, mobile and desktop |
-| Driver & vehicle details | 🧪 Simulated | Demo registry in DynamoDB, labelled "not verified" |
+| Driver & vehicle details | 🧪 Simulated | Demo registry in DynamoDB with an illustrative safety score, labelled "not verified" |
 | Journey screen + Safe Journey Mode | ✅ Completed | Leaflet map on real OSM routes, trip clock, HUD |
 | Two safety-event rules | ✅ Completed | Backend rules; positions are simulated (no live GPS) |
 | Passenger check-in prompt | ✅ Completed | Plus auto-escalation and a measured time to prompt |
 | Bedrock safety assistant | ✅ Completed | Grounded prompt, Guardrail, fallback, per-event cache |
-| Alert dashboard | ✅ Completed | Team-code protected, auto-refresh |
+| Alert dashboard → **Fleet safety dashboard** | ✅ Completed | Live fleet map + list (green/amber/red), speed, AI triage, operator acknowledge, demo fleet. Team-code protected |
+| AI triage for the operator (repositioning) | ✅ Completed | Bedrock one-sentence next action on every escalation; rules-based fallback |
+| Proactive WhatsApp check-ins (repositioning) | ✅ Completed | Passenger number at booking, personalised prompt, no TRIP code needed |
 | Trusted-contact notification | 🧪 Simulated / ✅ real for allow-listed numbers | Real WhatsApp send via OpenWA only to `wa_allowlist` |
 | Individual vs shared fare comparison | ✅ Completed | Illustrative pricing rules |
 | AWS-backed workflow | ✅ Completed | Terraform, CI/CD, monitoring |
@@ -64,7 +72,7 @@ Prereqs: Terraform ≥ 1.10, Python 3.12+ with `uv`, Node 22+, AWS CLI v2 logged
 
 ```bash
 make setup        # .venv + web deps
-make test         # 42 backend tests + typecheck + lint
+make test         # 48 backend tests + typecheck + lint
 make local        # full app on http://localhost:8077, in-memory DB, offline AI fallback (= backup demo)
 make local-ai     # same with real Bedrock
 make init         # terraform init (state bucket: ./scripts/bootstrap_state.sh, once per account)

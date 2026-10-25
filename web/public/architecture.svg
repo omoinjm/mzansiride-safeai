@@ -37,9 +37,14 @@
   <text x="40" y="440" class="s">no mobile data needed:</text>
   <text x="40" y="458" class="s">CHECK · TRIP · SOS · AI chat</text>
 
-  <rect x="24" y="560" width="200" height="70" class="box" stroke="#059669"/>
-  <text x="40" y="590" class="t">Trusted contact</text>
-  <text x="40" y="610" class="s">alert on WhatsApp (allow-listed)</text>
+  <rect x="24" y="520" width="200" height="64" class="box" stroke="#059669"/>
+  <text x="40" y="546" class="t">Trusted contact</text>
+  <text x="40" y="566" class="s">alert on WhatsApp (allow-listed)</text>
+
+  <rect x="24" y="604" width="200" height="80" class="box" stroke="#dc2626"/>
+  <text x="40" y="630" class="t">Fleet operator</text>
+  <text x="40" y="650" class="s">live fleet: green / amber / red</text>
+  <text x="40" y="668" class="s">AI triage · acknowledge (web)</text>
 
   <!-- Edge -->
   <rect x="290" y="130" width="210" height="76" class="box" stroke="#8C4FFF"/>
@@ -77,11 +82,12 @@
   <text x="576" y="484" class="s">shared core with api</text>
 
   <!-- AI + data -->
-  <rect x="860" y="130" width="360" height="110" class="box" stroke="#01A88D"/>
-  <text x="876" y="160" class="t">Amazon Bedrock · Anthropic Claude</text>
-  <text x="876" y="180" class="s">explains alerts + answers safety questions (Converse API)</text>
-  <text x="876" y="198" class="s">grounded in approved guidance (system prompt)</text>
-  <text x="876" y="216" class="s">+ Bedrock Guardrails · rules-based fallback if down</text>
+  <rect x="860" y="130" width="360" height="114" class="box" stroke="#01A88D"/>
+  <text x="876" y="160" class="t">Amazon Bedrock (generative AI)</text>
+  <text x="876" y="180" class="s">explains alerts · answers safety questions</text>
+  <text x="876" y="198" class="s">AI triage for the operator when an alert escalates</text>
+  <text x="876" y="216" class="s">Claude Haiku 5.5 (Nova Lite fallback) · Guardrails</text>
+  <text x="876" y="232" class="s">grounded guidance · rules-based text if Bedrock is down</text>
 
   <rect x="860" y="270" width="360" height="110" class="box" stroke="#C925D1"/>
   <text x="876" y="300" class="t">Amazon DynamoDB (on-demand, TTL)</text>
@@ -131,7 +137,7 @@
   <path class="line" d="M566,206 L566,214 L548,214 L548,430 L560,430"/>
   <path class="wa" d="M560,470 L520,470"/>
   <circle cx="540" cy="484" r="10" fill="#059669"/><text x="536" y="488" class="n">6</text>
-  <path class="wa" d="M290,470 C250,470 250,595 224,595"/>
+  <path class="wa" d="M290,470 C250,470 250,552 224,552"/>
   <path class="line" d="M780,430 L860,440"/>
   <path class="line" d="M780,460 C830,460 830,360 860,360"/>
   <path class="line" d="M640,360 L640,400"/>
@@ -139,6 +145,6 @@
 
   <!-- legend / flow -->
   <rect x="24" y="700" width="1232" height="48" rx="10" fill="#ecfdf6" stroke="#a7f3d0"/>
-  <text x="40" y="720" class="l"><tspan font-weight="700">Flow: </tspan>1 open app · 2 API call · 3 rules flag a stop/deviation, event stored · 4 Bedrock explains it + options · 5 WhatsApp → OpenWA → webhook · 6 reply / check-in prompt / contact alert via OpenWA</text>
+  <text x="40" y="720" class="l"><tspan font-weight="700">Flow: </tspan>1 open app · 2 API call · 3 telemetry → rules flag a stop/deviation · 4 Bedrock explains it; on escalation, AI triage for the operator · 5 WhatsApp → OpenWA → webhook · 6 check-in prompt / reply / contact alert via OpenWA</text>
   <text x="40" y="738" class="l"><tspan font-weight="700">Legend: </tspan>solid = implemented · dashed orange = simulated in the prototype · dashed grey = planned · green = WhatsApp channel</text>
 </svg>

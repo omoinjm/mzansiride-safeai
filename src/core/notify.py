@@ -131,11 +131,33 @@ def notify_trusted_contact(trip, event, reason):
     return record
 
 
+NOTICED = {
+    "PROLONGED_STOP": "has stopped for a while",
+    "ROUTE_DEVIATION": "has left the planned route",
+}
+
+
+def first_name(trip):
+    name = (trip.get("passenger_name") or "").split()
+    return name[0] if name and name[0] != "Passenger" else "there"
+
+
 def checkin_prompt(trip, event, explanation):
     return (
-        f"⚠️ *Safety check-in*, trip {trip['trip_id']}\n{explanation}\n\n"
-        "Reply *1* = I'm OK\nReply *2* = I need help (alerts your trusted contact)\n"
-        "In danger? Call 10111 or 112."
+        f"⚠️ Hi {first_name(trip)}, we noticed your trip to {trip.get('destination_name')} "
+        f"{NOTICED.get(event.get('type'), 'looks unusual')}. *Are you safe?*\n\n{explanation}\n\n"
+        "Reply *1* = YES, I'm OK\nReply *2* = HELP (alerts your trusted contact)\n"
+        f"Trip {trip['trip_id']}. In danger? Call 10111 or 112."
+    )
+
+
+def welcome_message(trip):
+    d = trip.get("driver") or {}
+    return (
+        f"👋 Hi {first_name(trip)}, Safe Journey Mode is on for your trip {trip['trip_id']} to "
+        f"{trip.get('destination_name')}.\nDriver: {d.get('name')}, {d.get('colour', '')} {d.get('vehicle', '')} "
+        f"*{d.get('plate', '')}*.\nIf the trip stops unexpectedly or leaves the route, we'll check in with you here. "
+        "No app or mobile data needed. (Prototype: simulated trip.)"
     )
 
 

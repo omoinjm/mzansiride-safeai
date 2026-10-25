@@ -28,6 +28,8 @@ export type BookRequest = {
   riders: number
   safe_mode: boolean
   trusted_contact?: { name: string; phone: string }
+  passenger_phone?: string
+  wa_session?: string
 }
 
 export const api = {
@@ -51,6 +53,15 @@ export const api = {
   waSimulate: (session: string, text: string) => req<{ replies: string[] }>('POST', '/whatsapp/simulate', { session, text }),
   waOutbox: (session: string) => req<{ messages: { text: string; at: string }[] }>('GET', `/whatsapp/outbox?session=${session}`),
   dashboard: (code: string) => req<Dashboard>('GET', '/dashboard', undefined, { 'x-team-code': code }),
+  ack: (code: string, id: string, ev: string, action: string) =>
+    req<SafetyEvent>('POST', `/trips/${id}/events/${ev}/ack`, { action }, { 'x-team-code': code }),
+}
+
+/** This browser's WhatsApp simulator chat (also where check-ins go for numbers that aren't allow-listed). */
+export function waSession() {
+  const s = store<string>('mz.waSession', '') || `web-${Math.random().toString(36).slice(2, 10)}`
+  save('mz.waSession', s)
+  return s
 }
 
 export function store<T>(key: string, fallback: T): T {

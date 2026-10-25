@@ -11,11 +11,13 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
   await page.getByPlaceholder('e.g. Thandi').fill('Thandi')
   await page.getByPlaceholder('Name', { exact: true }).fill('Mom')
   await page.getByPlaceholder('082 123 4567').fill('082 555 0101')
+  await page.getByPlaceholder('WhatsApp number').fill('082 555 0102')
   await expect(page.getByText('Shared ride · 2 riders')).toBeVisible()
   await page.screenshot({ path: `${shots}/01-book.png` })
   await page.getByRole('button', { name: /Request simulated ride/ }).click()
 
   await expect(page.getByText('Your driver')).toBeVisible()
+  await expect(page.getByText(/Check-ins arrive there automatically|also arrive on WhatsApp/)).toBeVisible()
   await page.getByRole('button', { name: /Check plate/ }).click()
   await expect(page.getByText(/registered with MzansiRide/)).toBeVisible()
   await page.screenshot({ path: `${shots}/02-driver.png` })
@@ -33,7 +35,7 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
   await expect(dialog).toBeHidden()
 
   await page.waitForTimeout(3000)
-  await page.getByRole('button', { name: /Simulate route deviation/ }).click()
+  await page.getByRole('button', { name: /Simulate off-route/ }).click()
   await expect(dialog).toBeVisible({ timeout: 30_000 })
   await expect(dialog.getByText(/Route deviation/)).toBeVisible()
   await page.screenshot({ path: `${shots}/04-checkin-deviation.png` })
@@ -42,14 +44,31 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
   await expect(page.getByText('Escalated').first()).toBeVisible({ timeout: 10_000 })
   await page.screenshot({ path: `${shots}/05-safety-log.png`, fullPage: true })
 
-  await page.getByRole('link', { name: 'Dashboard' }).first().click()
+  await page.getByRole('link', { name: 'Fleet' }).first().click()
   await page.getByPlaceholder('Team code').fill(TEAM_CODE)
   await page.getByRole('button', { name: 'Open dashboard' }).click()
-  await expect(page.getByText('Safety alert dashboard')).toBeVisible()
+  await expect(page.getByText('Fleet safety dashboard')).toBeVisible()
   await expect(page.getByRole('cell', { name: /Prolonged stop/ }).first()).toBeVisible()
   await page.screenshot({ path: `${shots}/06-dashboard.png`, fullPage: true })
 
   expect(errors).toEqual([])
+})
+
+test('fleet dashboard: demo fleet → unanswered check-in turns red with AI triage → operator acknowledges', async ({ page }) => {
+  test.setTimeout(120_000)
+  await page.goto('/dashboard')
+  await page.getByPlaceholder('Team code').fill(TEAM_CODE)
+  await page.getByRole('button', { name: 'Open dashboard' }).click()
+  await page.getByRole('button', { name: 'Run demo fleet' }).click()
+  await expect(page.locator('[data-risk="green"]').first()).toBeVisible({ timeout: 20_000 })
+  const red = page.locator('[data-risk="red"]', { hasText: 'Sarah' })
+  await expect(red).toBeVisible({ timeout: 60_000 })
+  await expect(red.getByText(/triage/i)).toBeVisible()
+  await page.screenshot({ path: `${shots}/10-fleet-dashboard.png`, fullPage: true })
+  await red.getByRole('button', { name: 'Called driver' }).click()
+  // Sarah's car is still stopped, so a newer alert may already be open: just check the ack was recorded.
+  await expect(page.getByText(/✔ Called driver/).first()).toBeVisible({ timeout: 10_000 })
+  await page.getByRole('button', { name: 'Stop demo fleet' }).click()
 })
 
 test('WhatsApp simulator: driver check and AI question', async ({ page }) => {

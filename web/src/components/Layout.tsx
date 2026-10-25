@@ -10,7 +10,7 @@ export default function Layout() {
     ...(currentTrip ? [{ to: `/trip/${currentTrip}`, label: 'My trip', icon: Navigation, end: false }] : []),
     { to: '/assistant', label: 'Assistant', icon: Sparkles, end: false },
     { to: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, end: false },
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: false },
+    { to: '/dashboard', label: 'Fleet', icon: LayoutDashboard, end: false },
     { to: '/about', label: 'About', icon: Info, end: false },
   ]
   return (

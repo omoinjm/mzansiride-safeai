@@ -29,6 +29,7 @@ export type Driver = {
   trips_completed: number
   registered_since: string
   status: string
+  safety_score?: number
 }
 
 export type Route = { distance_m: number; duration_s: number; points: [number, number][] }
@@ -62,7 +63,29 @@ export type SafetyEvent = {
   notifications: Notification[]
   prompt_ms?: number
   ai?: Record<string, AiResult>
+  triage?: AiResult
+  operator_ack?: OperatorAck
 }
+
+export type OperatorAck = { at: string; action: string }
+
+export type Risk = 'red' | 'amber' | 'handled' | 'green'
+
+export type FleetRow = {
+  trip_id: string
+  passenger_name: string
+  pickup_name: string
+  destination_name: string
+  driver: Driver
+  safe_mode: boolean
+  whatsapp_channel: WhatsAppChannel | null
+  position: { lat: number; lng: number; ts: number; speed_kmh?: number; at: string }
+  risk: Risk
+  latest_event: SafetyEvent | null
+  triage: (AiResult & { event_id: string; operator_ack?: OperatorAck }) | null
+}
+
+export type WhatsAppChannel = 'whatsapp' | 'simulator' | 'simulated'
 
 export type Trip = {
   trip_id: string
@@ -85,7 +108,9 @@ export type Trip = {
   started_at?: string
   events_count: number
   whatsapp_linked: boolean
-  last_position?: { lat: number; lng: number; ts: number }
+  whatsapp_channel?: WhatsAppChannel
+  passenger_phone?: string
+  last_position?: { lat: number; lng: number; ts: number; speed_kmh?: number }
   route?: Route
   events?: SafetyEvent[]
 }
@@ -114,8 +139,11 @@ export type AppConfig = {
 }
 
 export type Dashboard = {
+  fleet: FleetRow[]
   summary: {
     trips: number
+    active: number
+    at_risk: number
     trips_safe_mode: number
     events: number
     events_by_type: Record<string, number>
