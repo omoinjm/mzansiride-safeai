@@ -65,6 +65,8 @@ def test_notify_any_number_with_send_limits(aws, monkeypatch):
     r = notify.notify_trusted_contact(trip, None, "passenger_sos")  # any valid number, no allow-list
     assert r["status"] == "queued:27825550101@c.us"
     assert notify.msisdn("+27 (82) 555-0101") == "27825550101"
+    assert notify.deliverable("082 555 0101") and notify.deliverable("+44 7700 900123")
+    assert not notify.deliverable("000 000 0000") and not notify.deliverable("011 555 0101")  # demo / landline
     monkeypatch.setattr(notify, "PER_NUMBER_PER_HOUR", 3)
     statuses = [notify.notify_trusted_contact(trip, None, "passenger_sos")["status"] for _ in range(3)]
     assert statuses[-1] == "rate_limited" and statuses[0].startswith("queued")

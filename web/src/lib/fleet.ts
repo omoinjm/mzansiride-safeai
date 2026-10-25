@@ -40,9 +40,9 @@ export class FleetDemo {
           passenger_name: `${d.name} (demo fleet)`,
           riders: 1,
           safe_mode: true,
-          trusted_contact: { name: `${d.name}'s contact`, phone: '082 000 0000' },
+          trusted_contact: { name: `${d.name}'s contact`, phone: '000 000 0000' }, // never a real number: alerts stay simulated
           // Sarah's check-ins go to this browser's WhatsApp simulator, where nobody answers.
-          ...(d.whatsapp ? { passenger_phone: '082 000 0001', wa_session: waSession() } : {}),
+          ...(d.whatsapp ? { passenger_phone: '000 000 0001', wa_session: waSession() } : {}),
         })
         await api.start(trip.trip_id)
         return { tripId: trip.trip_id, sim: new Sim(trip.route!.points, trip.route!.duration_s), script: d.script, ticks: 0, done: false }

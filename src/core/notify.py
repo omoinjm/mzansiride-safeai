@@ -58,9 +58,16 @@ def take_send_quota(phone):
     return ok
 
 
+def deliverable(phone):
+    """Could this be a real WhatsApp number? South African numbers must be mobiles (06x/07x/08x); the demo
+    fleet and tests use 000-prefixed numbers, which never are, so they are never messaged for real."""
+    d = msisdn(phone)
+    return bool(d) and (not d.startswith("27") or (len(d) == 11 and d[2] in "678"))
+
+
 def contact_delivery(phone):
-    """How alerts to this number are delivered: real WhatsApp, or recorded as simulated (WhatsApp not connected)."""
-    return "whatsapp" if msisdn(phone) and whatsapp_enabled() else "simulated"
+    """How alerts to this number are delivered: real WhatsApp, or recorded as simulated."""
+    return "whatsapp" if deliverable(phone) and whatsapp_enabled() else "simulated"
 
 
 def whatsapp_enabled():

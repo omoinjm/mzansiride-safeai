@@ -10,8 +10,8 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
   await page.goto('/')
   await page.getByPlaceholder('e.g. Thandi').fill('Thandi')
   await page.getByPlaceholder('Name', { exact: true }).fill('Mom')
-  await page.getByPlaceholder('082 123 4567').fill('082 555 0101')
-  await page.getByPlaceholder('WhatsApp number').fill('082 555 0102')
+  await page.getByPlaceholder('082 123 4567').fill('000 555 0101') // 000 numbers are never messaged for real
+  await page.getByPlaceholder('WhatsApp number').fill('000 555 0102')
   await expect(page.getByText('Shared ride · 2 riders')).toBeVisible()
   await page.screenshot({ path: `${shots}/01-book.png` })
   await page.getByRole('button', { name: /Request simulated ride/ }).click()
