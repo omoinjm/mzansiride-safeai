@@ -174,7 +174,7 @@ export type Health = {
     status: 'ok' | 'degraded'
   }
   messages_today: Record<
-    | 'whatsapp_sent' | 'whatsapp_failed' | 'whatsapp_received'
+    | 'whatsapp_sent' | 'whatsapp_failed' | 'whatsapp_received' | 'whatsapp_undeliverable'
     | 'contact_alerts_whatsapp' | 'contact_alerts_simulated' | 'contact_alerts_rate_limited',
     number
   >

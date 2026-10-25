@@ -59,7 +59,9 @@ export default function HealthPanel({ code }: { code: string }) {
       status: m.whatsapp_failed > 0 ? 'degraded' : 'ok',
       main: `${m.whatsapp_sent} sent · ${m.whatsapp_received} received`,
       sub: `contact alerts: ${m.contact_alerts_whatsapp} WhatsApp, ${m.contact_alerts_simulated} simulated, ${m.contact_alerts_rate_limited} over limit`,
-      note: m.whatsapp_failed ? `${m.whatsapp_failed} failed sends` : '',
+      note: [m.whatsapp_failed ? `${m.whatsapp_failed} failed sends` : '', m.whatsapp_undeliverable ? `${m.whatsapp_undeliverable} to numbers not on WhatsApp` : '']
+        .filter(Boolean)
+        .join(' · '),
     },
     {
       icon: Activity,

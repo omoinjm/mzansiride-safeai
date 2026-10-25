@@ -32,7 +32,7 @@ export function fmtZar(n: number) {
 }
 
 export function timeAgo(iso: string) {
-  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000)
+  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000)) // clocks can differ by a second
   if (s < 60) return `${s}s ago`
   if (s < 3600) return `${Math.round(s / 60)} min ago`
   if (s < 86400) return `${Math.round(s / 3600)} h ago`

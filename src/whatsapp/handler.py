@@ -13,6 +13,7 @@ Two entry points in one function:
 import base64
 import json
 import time
+import urllib.error
 
 import boto3
 
@@ -69,10 +70,22 @@ def _send(chat_id, text):
         _remember_lid(chat_id, openwa.send_text(chat_id, text))
         health.record({"wa_sent": 1}, wa_last_sent_at=health._now())
         log("INFO", "whatsapp_sent", chat=notify.mask(chat_id), chars=len(text))
-    except Exception as e:
-        health.record({"wa_failed": 1}, wa_last_error_at=health._now(), wa_last_error=type(e).__name__ + ": " + str(e)[:100])
-        log("ERROR", "whatsapp_send_failed", chat=notify.mask(chat_id), error=str(e)[:300])
+    except urllib.error.HTTPError as e:
+        if 400 <= e.code < 500:
+            # The gateway is fine; this recipient can't be reached (e.g. the number isn't on WhatsApp).
+            health.record({"wa_undeliverable": 1})
+            log("WARN", "whatsapp_undeliverable", chat=notify.mask(chat_id), error=str(e)[:200])
+            return
+        _gateway_failed(chat_id, e)
         raise
+    except Exception as e:
+        _gateway_failed(chat_id, e)
+        raise
+
+
+def _gateway_failed(chat_id, e):
+    health.record({"wa_failed": 1}, wa_last_error_at=health._now(), wa_last_error=type(e).__name__ + ": " + str(e)[:100])
+    log("ERROR", "whatsapp_send_failed", chat=notify.mask(chat_id), error=str(e)[:300])
 
 
 def handle_action(event):

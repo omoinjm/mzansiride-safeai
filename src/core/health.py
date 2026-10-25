@@ -11,6 +11,7 @@ from . import store
 from .log import log
 
 STATE = "health#state"
+RECENT_S = 15 * 60  # a gateway failure older than this (with no send since) no longer marks WhatsApp degraded
 
 
 def _day():
@@ -81,7 +82,8 @@ def _whatsapp_status(state, ping):
     if ping and not ping["ok"]:
         return "down", "The WhatsApp gateway isn't answering. Check the EC2 instance, then run make wa-status."
     last_ok, last_err = state.get("wa_last_sent_at", ""), state.get("wa_last_error_at", "")
-    if last_err and last_err > last_ok:
+    recent = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - RECENT_S))
+    if last_err and last_err > last_ok and last_err >= recent:
         return "degraded", "The last send failed. If it keeps failing, run make wa-restart (keeps the login)."
     return "ok", "Sending and receiving normally."
 
@@ -110,6 +112,7 @@ def snapshot():
         },
         "messages_today": {
             "whatsapp_sent": n("wa_sent"), "whatsapp_failed": n("wa_failed"), "whatsapp_received": n("wa_received"),
+            "whatsapp_undeliverable": n("wa_undeliverable"),
             "contact_alerts_whatsapp": n("contact_whatsapp"), "contact_alerts_simulated": n("contact_simulated"),
             "contact_alerts_rate_limited": n("contact_rate_limited"),
         },
