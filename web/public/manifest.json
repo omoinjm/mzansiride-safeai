@@ -1,0 +1,17 @@
+{
+  "name": "MzansiRide SafeAI",
+  "short_name": "MzansiRide",
+  "description": "Safety-first ride sharing for South Africa: check-ins on WhatsApp, AI guidance, trusted contacts. Hackathon prototype.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#063f31",
+  "theme_color": "#078a66",
+  "lang": "en-ZA",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

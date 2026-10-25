@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
 import {
-  Bell, Car, CirclePause, CirclePlay, Clock, Flag, MessageCircle, Route as RouteIcon, Share2, Shield, ShieldAlert,
+  Bell, Car, CirclePause, Navigation, CirclePlay, Clock, Flag, MessageCircle, Route as RouteIcon, Share2, Shield, ShieldAlert,
   ShieldCheck, Siren, Sparkles, UserRound,
 } from 'lucide-react'
 import { api, save } from '../lib/api'
@@ -165,7 +165,7 @@ export default function TripPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
           <div className="relative">
-            <TripMap points={points} car={trip.status === 'in_progress' || snap?.ts ? snap?.pos : null} trail={snap?.trail} events={events} className="h-[46vh] min-h-72 lg:h-[520px]" />
+            <TripMap points={points} alternatives={trip.route.alternatives} car={trip.status === 'in_progress' || snap?.ts ? snap?.pos : null} trail={snap?.trail} events={events} className="h-[46vh] min-h-72 lg:h-[520px]" />
             {trip.status === 'in_progress' && snap && <JourneyHud snap={snap} safe={trip.safe_mode} />}
           </div>
 
@@ -200,6 +200,13 @@ export default function TripPage() {
                 sim.current?.stop()
                 setSnap(sim.current!.snapshot())
                 setRunning(true)
+              }}
+              alternative={trip.route.alternatives?.[0]}
+              onFollowAlternative={() => {
+                sim.current?.followRoute(trip.route!.alternatives![0])
+                setSnap(sim.current!.snapshot())
+                setRunning(true)
+                flash("Driver is following another road (like Waze would). Our rules know it: no alert.")
               }}
               onDeviate={() => {
                 sim.current?.deviate()
@@ -288,6 +295,8 @@ function DemoControls(props: {
   onStop: () => void
   onDeviate: () => void
   onNormal: () => void
+  alternative?: [number, number][]
+  onFollowAlternative: () => void
 }) {
   const { snap, running, stepS, safe } = props
   return (
@@ -305,6 +314,16 @@ function DemoControls(props: {
         <button className="btn-secondary border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100" onClick={props.onNormal} disabled={snap.mode === 'driving' && running}>
           <Car size={16} /> Simulate normal drive
         </button>
+        {props.alternative && (
+          <button
+            className="btn-secondary"
+            onClick={props.onFollowAlternative}
+            disabled={snap.mode !== 'driving' || snap.progress > 0.15}
+            title="Available near the start of the trip, where the roads split"
+          >
+            <Navigation size={16} /> Simulate driver's own route (Waze)
+          </button>
+        )}
         <button className="btn-secondary border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100" onClick={props.onDeviate} disabled={snap.mode !== 'driving'}>
           <RouteIcon size={16} /> Simulate off-route
         </button>
@@ -541,6 +560,10 @@ function Completed({ trip, events }: { trip: Trip; events: SafetyEvent[] }) {
           <p className="text-lg font-extrabold">{alerts}</p>
         </div>
       </div>
+      <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+        📅 If you make this trip 10 times a week, that's about <strong>R{Math.round((trip.fare_zar * 10 * 52) / 12).toLocaleString('en-ZA')}</strong> a month
+        {trip.ride_type === 'individual' && <> (about R{Math.round((trip.individual_fare_zar * 1.2 / 3) * 10 * 52 / 12).toLocaleString('en-ZA')} shared by 3)</>}.
+      </p>
       {sharedSaving > 0 && (
         <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
           💡 Sharing this ride with one other passenger would have saved you about <strong>R{sharedSaving}</strong>.

@@ -14,7 +14,10 @@ export function describe(e: SafetyEvent) {
     const m = Math.max(1, Math.round((e.details.stationary_s ?? 0) / 60))
     return `Your vehicle hasn't moved for about ${m} minute${m === 1 ? '' : 's'}.`
   }
-  if (e.type === 'ROUTE_DEVIATION') return `Your vehicle is about ${e.details.deviation_m} m away from the planned route.`
+  if (e.type === 'ROUTE_DEVIATION')
+    return e.details.toward_destination
+      ? `Your vehicle is on a different road from the planned route (about ${e.details.deviation_m} m away), but still heading towards your destination.`
+      : `Your vehicle is about ${e.details.deviation_m} m away from the planned route.`
   return 'Something unusual happened on this trip.'
 }
 

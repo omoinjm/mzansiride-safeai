@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { ArrowDownUp, Car, MapPin, MessageCircle, ShieldCheck, Sparkles, UsersRound } from 'lucide-react'
 import { api, save, store, waSession } from '../lib/api'
 import type { Place, Quote } from '../lib/types'
@@ -79,7 +79,13 @@ export default function BookPage() {
           <p className="mt-3 max-w-xl text-brand-50">
             You shouldn't have to press a panic button in a crisis. Safe Journey Mode watches the trip data for unexpected stops and route changes, checks in with you on WhatsApp (no mobile data needed), and alerts your trusted contact and the operator's safety team if you need help or don't answer.
           </p>
-          <div className="mt-5 grid grid-cols-3 gap-2 text-center text-xs sm:max-w-md">
+          <Link
+            to="/assistant"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gold-400 px-4 py-3 text-sm font-bold text-brand-900 shadow hover:bg-gold-500"
+          >
+            <Sparkles size={18} /> Ask the AI safety assistant
+          </Link>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs sm:max-w-md">
             {[
               { icon: ShieldCheck, t: 'Check-ins' },
               { icon: Sparkles, t: 'AI guidance' },

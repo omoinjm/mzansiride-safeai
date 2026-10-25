@@ -14,16 +14,24 @@ DEFAULTS = {
     "stop_seconds": 180,  # stationary for 3 minutes (trip time) -> check-in
     "deviation_m": 250,  # further than this from the planned route...
     "deviation_ticks": 2,  # ...for this many consecutive readings -> check-in (filters GPS jitter)
+    # Off every known route but still closing in on the destination (e.g. the driver follows Waze):
+    # probably a sensible other road, so ask only if it gets further off or lasts longer.
+    "heading_readings": 3,  # destination distance must fall across this many readings
+    "deviation_m_heading": 500,
+    "deviation_ticks_heading": 4,
     "endpoint_radius_m": 200,  # waiting near pickup or destination is normal
 }
 
 
 def new_state():
-    return {"anchor": None, "anchor_ts": None, "last_ts": None, "off_route_ticks": 0, "latched": []}
+    return {"anchor": None, "anchor_ts": None, "last_ts": None, "off_route_ticks": 0, "latched": [], "dest_dist": []}
 
 
-def evaluate(state, tick, route_points, cfg=None):
+def evaluate(state, tick, route_points, cfg=None, alternatives=None):
     """Apply one position reading. Returns (new_state, [new events]).
+
+    route_points is the planned route; alternatives are other plausible roads between the same places
+    (what Waze or Google Maps might choose). A car on any of them is on route.
 
     tick: {"lat", "lng", "ts"} where ts is trip time in seconds (the simulator's clock).
     A rule fires once, then stays latched until the condition clears (the car moves again or
@@ -32,6 +40,7 @@ def evaluate(state, tick, route_points, cfg=None):
     cfg = {**DEFAULTS, **(cfg or {})}
     s = {**new_state(), **(state or {})}
     s["latched"] = list(s.get("latched") or [])
+    s["dest_dist"] = list(s.get("dest_dist") or [])
     pos = (float(tick["lat"]), float(tick["lng"]))
     ts = float(tick["ts"])
     events = []
@@ -56,12 +65,20 @@ def evaluate(state, tick, route_points, cfg=None):
             events.append(_event(PROLONGED_STOP, pos, ts, {"stationary_s": round(stationary)}))
 
     # --- route deviation ---
-    off_by = distance_to_polyline(pos, [tuple(p) for p in route_points]) if route_points else 0
+    routes = [r for r in [route_points, *(alternatives or [])] if r]
+    off_by = min(distance_to_polyline(pos, [tuple(p) for p in r]) for r in routes) if routes else 0
+    if route_points:
+        s["dest_dist"] = (s["dest_dist"] + [round(haversine(pos, tuple(route_points[-1])))])[-cfg["heading_readings"]:]
+    d = s["dest_dist"]
+    heading = len(d) == cfg["heading_readings"] and all(a > b for a, b in zip(d, d[1:]))
+    limit_m, limit_ticks = ((cfg["deviation_m_heading"], cfg["deviation_ticks_heading"]) if heading
+                            else (cfg["deviation_m"], cfg["deviation_ticks"]))
     if off_by > cfg["deviation_m"]:
         s["off_route_ticks"] += 1
-        if s["off_route_ticks"] >= cfg["deviation_ticks"] and ROUTE_DEVIATION not in s["latched"]:
+        if (off_by > limit_m and s["off_route_ticks"] >= limit_ticks
+                and ROUTE_DEVIATION not in s["latched"]):
             s["latched"].append(ROUTE_DEVIATION)
-            events.append(_event(ROUTE_DEVIATION, pos, ts, {"deviation_m": round(off_by)}))
+            events.append(_event(ROUTE_DEVIATION, pos, ts, {"deviation_m": round(off_by), "toward_destination": heading}))
     else:
         s["off_route_ticks"] = 0
         if ROUTE_DEVIATION in s["latched"]:
@@ -81,5 +98,8 @@ def describe(event):
         mins = max(1, round(d.get("stationary_s", 0) / 60))
         return f"The vehicle has not moved for about {mins} minute{'s' if mins != 1 else ''}."
     if event["type"] == ROUTE_DEVIATION:
+        if d.get("toward_destination"):
+            return (f"The vehicle is taking a different road from the planned route (about {d.get('deviation_m', 0)} m away), "
+                    "but is still heading towards the destination.")
         return f"The vehicle is about {d.get('deviation_m', 0)} m away from the planned route."
     return "Something unusual happened on this trip."

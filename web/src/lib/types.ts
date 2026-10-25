@@ -32,7 +32,7 @@ export type Driver = {
   safety_score?: number
 }
 
-export type Route = { distance_m: number; duration_s: number; points: [number, number][] }
+export type Route = { distance_m: number; duration_s: number; points: [number, number][]; alternatives?: [number, number][][] }
 
 export type Notification = {
   to_name: string
@@ -55,7 +55,7 @@ export type SafetyEvent = {
   trip_ts?: number
   lat?: number
   lng?: number
-  details: { stationary_s?: number; deviation_m?: number; channel?: string }
+  details: { stationary_s?: number; deviation_m?: number; toward_destination?: boolean; channel?: string }
   response?: 'ok' | 'help'
   response_channel?: string
   responded_at?: string

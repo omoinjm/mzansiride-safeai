@@ -1,9 +1,9 @@
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Car, Info, LayoutDashboard, MessageCircle, Navigation, Sparkles } from 'lucide-react'
 import { store } from '../lib/api'
 
 export default function Layout() {
-  useLocation() // re-render on navigation so "My trip" appears after booking
+  const { pathname } = useLocation() // re-render on navigation so "My trip" appears after booking
   const currentTrip = store<string | null>('mz.trip', null)
   const nav = [
     { to: '/', label: 'Ride', icon: Car, end: true },
@@ -45,6 +45,14 @@ export default function Layout() {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-24 md:pb-10">
         <Outlet />
       </main>
+      {pathname !== '/assistant' && (
+        <Link
+          to="/assistant"
+          className="fixed right-4 bottom-20 z-[1100] flex items-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-lg ring-4 ring-white hover:bg-brand-700 md:bottom-6"
+        >
+          <Sparkles size={18} /> Ask AI
+        </Link>
+      )}
       <nav className="fixed inset-x-0 bottom-0 z-[1000] grid border-t border-slate-200 bg-white md:hidden" style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}>
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink

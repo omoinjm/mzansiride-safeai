@@ -32,9 +32,9 @@ export class Sim {
 
   constructor(points: [number, number][], durationS: number, start?: { lat: number; lng: number; ts: number }) {
     this.pts = points
-    this.cum = [0]
-    for (let i = 1; i < points.length; i++) this.cum.push(this.cum[i - 1] + metres(points[i - 1], points[i]))
-    this.total = this.cum[this.cum.length - 1]
+    this.cum = []
+    this.total = 0
+    this.setPath(points)
     this.speed = this.total / Math.max(60, durationS)
     if (start) {
       // resume after a page reload: continue the trip clock (the backend ignores older readings)
@@ -89,6 +89,32 @@ export class Sim {
   }
 
   /** Stops where the car is, also mid-detour ("stopped off-route"). */
+  private setPath(points: [number, number][]) {
+    this.pts = points
+    this.cum = [0]
+    for (let i = 1; i < points.length; i++) this.cum.push(this.cum[i - 1] + metres(points[i - 1], points[i]))
+    this.total = this.cum[this.cum.length - 1]
+  }
+
+  /** The driver follows another road (e.g. the route Waze chose), from the closest point on it. */
+  followRoute(points: [number, number][]) {
+    const here = this.position()
+    let best = 0
+    let bestD = Infinity
+    points.forEach((p, i) => {
+      const d = metres(p, here)
+      if (d < bestD) {
+        bestD = d
+        best = i
+      }
+    })
+    this.setPath(points)
+    this.dist = this.cum[best]
+    this.offsetM = 0
+    this.trail = []
+    this.mode = 'driving'
+  }
+
   stop() {
     if (this.mode === 'driving' || this.mode === 'detour') {
       this.mode = 'stopped'

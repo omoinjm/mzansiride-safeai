@@ -251,7 +251,8 @@ def telemetry(trip_id, tick):
     new_events, escalated, reminded = [], [], []
     if trip.get("safe_mode"):
         route = places.get_route(trip["pickup"], trip["destination"])
-        state, detected = rules.evaluate(trip.get("rules_state"), tick, route["points"])
+        state, detected = rules.evaluate(trip.get("rules_state"), tick, route["points"],
+                                         alternatives=route.get("alternatives"))
         trip["rules_state"] = state
         for d in detected:
             ev = _new_event(trip, d["type"], d["lat"], d["lng"], d["trip_ts"], d["details"])

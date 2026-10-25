@@ -102,6 +102,26 @@ test('driver card: Face ID result and plate photo check', async ({ page }) => {
   await page.screenshot({ path: `${shots}/11-driver-checks.png`, fullPage: true })
 })
 
+test("driver follows Waze's road: no false alarm; commute budget; Ask AI; installable", async ({ page, request }) => {
+  await page.goto('/')
+  await expect(page.getByRole('table', { name: 'Regular trip cost' })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Regular trip cost' }).getByText(/save R/).first()).toBeVisible()
+  expect((await request.get('/manifest.json')).status()).toBe(200)
+
+  await page.locator('select').first().selectOption('wits')
+  await page.locator('select').nth(1).selectOption('sandton')
+  await page.getByRole('button', { name: /Request simulated ride/ }).click()
+  await page.getByRole('button', { name: /Start trip/ }).click()
+  await page.getByLabel('Simulation speed').selectOption('30')
+  await page.getByRole('button', { name: /driver's own route/ }).click()
+  await page.waitForTimeout(12_000) // ~6 min of trip time on the other road
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await page.screenshot({ path: `${shots}/12-alternative-route.png` })
+
+  await page.getByRole('link', { name: 'Ask AI' }).click()
+  await expect(page).toHaveURL(/\/assistant/)
+})
+
 test('WhatsApp simulator: driver check and AI question', async ({ page }) => {
   await page.goto('/whatsapp')
   const box = page.getByPlaceholder('Message')

@@ -36,12 +36,14 @@ export default function TripMap({
   points,
   car,
   trail,
+  alternatives = [],
   events = [],
   className = 'h-72',
 }: {
   points: [number, number][]
   car?: [number, number] | null
   trail?: [number, number][]
+  alternatives?: [number, number][][]
   events?: SafetyEvent[]
   className?: string
 }) {
@@ -54,6 +56,11 @@ export default function TripMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Fit points={points} />
+        {alternatives.map((alt, i) => (
+          <Polyline key={i} positions={alt} pathOptions={{ color: '#64748b', weight: 4, opacity: 0.45, dashArray: '2 8' }}>
+            <Tooltip sticky>Other road a navigation app might choose: not flagged</Tooltip>
+          </Polyline>
+        ))}
         <Polyline positions={points} pathOptions={{ color: '#078a66', weight: 5, opacity: 0.75 }} />
         {trail && trail.length > 1 && <Polyline positions={trail} pathOptions={{ color: '#dc2626', weight: 4, dashArray: '6 6' }} />}
         {points.length > 0 && <Marker position={points[0]} icon={pickupIcon} />}
