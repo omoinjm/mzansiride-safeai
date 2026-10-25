@@ -7,8 +7,7 @@
 
 **Proactive, not reactive.** A panic button asks the passenger to act during a crisis. Here, the trip's telemetry (position,
 speed, stops) goes through backend rules on every reading. A **prolonged stop** or **route deviation** triggers a
-**WhatsApp check-in** ("Hi Sarah, we noticed your trip to Sandton has left the planned route. Are you safe? Reply 1 for YES,
-2 for HELP"), which needs no app and no mobile data, only WhatsApp. **Amazon Bedrock** explains the alert in plain language.
+**WhatsApp check-in** ("Sarah, your trip has left the route. Are you safe? Reply 1 = Safe, 2 = Help"), which needs no app and no mobile data, only WhatsApp. **Amazon Bedrock** explains the alert in plain language.
 If the passenger asks for help or doesn't answer, the system acts for them: their **trusted contact** is alerted, and
 Bedrock writes a one-sentence **triage action** for the operator's safety team. The team watches the whole fleet on a live
 dashboard, with each trip green, amber or red.

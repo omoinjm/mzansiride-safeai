@@ -35,7 +35,7 @@ Total is about 12 minutes. If you're told 10 minutes, cut section 4 into the dem
 - "We don't sell to passengers, we sell to operators like Bolt or Uber in South Africa: real-time risk telemetry, automated WhatsApp check-ins, and an AI-assisted fleet dashboard, so their safety team handles incidents faster and can show regulators an audit trail."
 - Key features (point at the home page, then the Fleet page):
   1. **Safe Journey Mode**: rules watch for a **prolonged stop** or a **route deviation**.
-  2. A **check-in on WhatsApp**, sent automatically ("Hi Sarah, we noticed your trip to Sandton has left the planned route. Are you safe? Reply 1 for YES, 2 for HELP"). No answer within 2 minutes → automatic escalation.
+  2. A **check-in on WhatsApp**, sent automatically ("Sarah, your trip has left the route. Are you safe? Reply 1 = Safe, 2 = Help": short enough to read in two seconds). No answer within 2 minutes → automatic escalation.
   3. An **AI safety assistant** (Amazon Bedrock) that explains *why* we're asking and what your options are.
   4. **Trusted-contact alerts** with the driver, vehicle and last location.
   5. **Driver check**: look up a plate or name in our registry before getting in.
@@ -96,7 +96,7 @@ Before the demo, on the **Ride** page put the **spare-phone / teammate's number*
 | 0:35 | **Check plate from a photo** (photograph the driver card plate on screen, or a printed plate), then **Start trip**: the card shows the Face ID result. | "She photographs the plate. Bedrock reads it and checks our registry. And when the ride starts, the driver's Face ID result shows here. That part is simulated in the prototype." |
 | 0:45 | **Start trip**, **30× speed**. | "This is a simulated trip on real Joburg roads. The car sends its position and speed every few seconds, and our rules engine in Lambda checks every reading." |
 | 1:00 | **Simulate off-route**, then **Simulate prolonged stop**. | "The car leaves the route… and stops." |
-| 1:10 | Point at the phone: the check-in arrives. **Don't answer it.** | "Without Thandi pressing anything, she gets: *Hi Thandi, we noticed your trip to Sandton has left the planned route. Are you safe? Reply 1 for YES, 2 for HELP.* The explanation comes from Amazon Bedrock." |
+| 1:10 | Point at the phone: the check-in arrives. **Don't answer it.** | "Without Thandi pressing anything, she gets: *Thandi, your trip has left the route. Are you safe? Reply 1 = Safe, 2 = Help.* One question, one tap. If she wants to know why, the Bedrock assistant explains." |
 | 1:20 | *(Optional, if time)* On the first alert reply on WhatsApp in words: "we took a detour, still going to Sandton". | "She can answer in her own words. The AI understood it was a detour and closed the alert. If it isn't sure, it asks again; it never assumes she's OK." Then trigger the stop and don't answer. |
 | 1:30 | Wait ~4 s (2 min of trip time; a reminder arrives at half). The safety log shows *escalated*. | "She doesn't answer. Maybe she can't. So the system acts for her: her mom is alerted with the driver, plate and location." |
 | 1:50 | **Fleet** page (team code already saved). | "This is the product the operator buys. Every live trip. Thandi's is flashing red…" |
