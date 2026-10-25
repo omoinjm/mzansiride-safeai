@@ -24,7 +24,7 @@ WhatsApp bundles but no mobile data. A shared-ride fare comparison shows how sha
 | **Amazon API Gateway (HTTP API)** | `ANY /api/{proxy+}` → `api` Lambda. `POST /whatsapp/webhook` → `whatsapp` Lambda. Throttled to 25 rps (burst 50). |
 | **AWS Lambda `api`** (Python 3.13, arm64) | Trips, **safety rules engine**, check-ins, escalation, trusted-contact notifications, assistant, dashboard. |
 | **AWS Lambda `whatsapp`** | Verifies the OpenWA HMAC signature, deduplicates, and acknowledges at once. It then processes asynchronously (it invokes itself) and replies through OpenWA. |
-| **Amazon Bedrock** (Anthropic Claude, EU inference profile) | Explains alerts and answers safety questions (Converse API), grounded in [`src/core/guidance.md`](src/core/guidance.md). |
+| **Amazon Bedrock** (Claude Haiku 5.5, EU inference profile; Amazon Nova Lite as fallback model) | Explains alerts and answers safety questions (Converse API), grounded in [`src/core/guidance.md`](src/core/guidance.md). If Claude is refused (e.g. model access not granted), Nova Lite answers instead. |
 | **Amazon Bedrock Guardrails** | Content filters + prompt-attack filter + a denied topic: *criminal profiling of drivers*. The violence filter is off **for input** so that a passenger describing a threat is never blocked. |
 | **Amazon DynamoDB** | `trips`, `events` (check-ins, notifications), `drivers` (demo registry, seeded by Terraform), `whatsapp` (chat↔trip links, webhook dedupe, simulator outbox). On-demand, 14-day TTL. |
 | **Amazon EC2 + OpenWA** | Self-hosted WhatsApp gateway ([rmyndharis/OpenWA](https://github.com/rmyndharis/OpenWA), MIT). Caddy provides TLS and exposes **only** `send-text` and `health`. Admin goes through SSM Run Command (no SSH, no public dashboard). |
@@ -64,10 +64,10 @@ Prereqs: Terraform ≥ 1.10, Python 3.12+ with `uv`, Node 22+, AWS CLI v2 logged
 
 ```bash
 make setup        # .venv + web deps
-make test         # 39 backend tests + typecheck + lint
+make test         # 42 backend tests + typecheck + lint
 make local        # full app on http://localhost:8077, in-memory DB, offline AI fallback (= backup demo)
 make local-ai     # same with real Bedrock
-make init         # terraform init (state: same S3 bucket as RekogNail, key mzansiride/)
+make init         # terraform init (state bucket: ./scripts/bootstrap_state.sh, once per account)
 make deploy       # tests → terraform plan → apply that plan → upload SPA → invalidate
 make url; make code
 make e2e          # Playwright journey (E2E_URL=$(make url) TEAM_CODE=$(make code) make e2e for the live site)
@@ -79,7 +79,7 @@ Optional `infra/terraform.tfvars` (git-ignored):
 wa_number    = "+27 82 000 0000"             # the number linked to OpenWA (shown in the app)
 wa_allowlist = ["+27820000001", "+27820000002"] # teammates: may receive trusted-contact alerts
 budget_email = "you@example.com"
-model_id     = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+model_id     = "eu.anthropic.claude-haiku-5-5"
 ```
 
 ### WhatsApp (OpenWA) one-time setup

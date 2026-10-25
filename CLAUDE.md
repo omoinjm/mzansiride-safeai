@@ -21,7 +21,7 @@ Deploying = pushing to `main` (`.github/workflows/deploy.yml`, OIDC role `github
 - **Notifications:** `core/notify.py`. Real WhatsApp sends only via an async invoke of the whatsapp Lambda, and only to linked chats or `WA_ALLOWLIST`. Everything else is recorded as `simulated`.
 - **OpenWA** (`infra/openwa.tf`, `openwa/user_data.sh.tftpl`): Caddy exposes only `send-text` and `health`. Secrets are in SSM `/mzansiride/openwa/*` (`api_key` is written by the instance on first boot, `session_id` by `scripts/openwa.sh setup`). Webhook HMAC is `X-OpenWA-Signature: sha256=<hex>`. The instance ignores AMI changes so the WhatsApp login isn't lost.
 - **Frontend:** Vite + React 19 + Tailwind v4 (component classes are `@utility` in `index.css`). It talks to `/api` same-origin through CloudFront, and a CloudFront Function does the SPA rewrite. `routes.json` (OSM routes between 6 Joburg places) is the single source for maps and fares.
-- **Terraform state** is shared with RekogNail's bucket (`infra/backend.hcl`, key `mzansiride/`). Don't touch the `smartthumb-*` resources.
+- **Terraform state** is in `mzansiride-tfstate-<account>-eu-west-1` (`scripts/bootstrap_state.sh` writes `infra/backend.hcl`). Same AWS account as RekogNail, whose stack has been torn down.
 
 ## Gotchas
 - Lambda concurrency in this account is 10: don't add reserved concurrency.

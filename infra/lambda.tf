@@ -24,6 +24,7 @@ locals {
     DRIVERS_TABLE     = aws_dynamodb_table.drivers.name
     WHATSAPP_TABLE    = aws_dynamodb_table.whatsapp.name
     MODEL_ID          = var.model_id
+    MODEL_FALLBACK_ID = var.model_fallback_id
     GUARDRAIL_ID      = var.enable_guardrail ? aws_bedrock_guardrail.safety[0].guardrail_id : ""
     GUARDRAIL_VERSION = var.enable_guardrail ? aws_bedrock_guardrail_version.safety[0].version : ""
     WHATSAPP_FUNCTION = var.enable_whatsapp ? local.wa_name : ""

@@ -59,7 +59,7 @@ Quick tour (or fold into the demo): **Ride** (booking + fare comparison) → **T
 ## 5. AI integration (A, 1:15)
 - **What it does:** explains each alert in calm, plain language, lists the passenger's options, and answers safety questions in the app or on WhatsApp.
 - **Why AI:** a stressed passenger needs a clear, contextual explanation (trip, driver, how long the stop has lasted) in seconds, not a policy document. The AI also handles free-text questions like "the driver is asking for extra cash".
-- **Which service:** Amazon Bedrock with Anthropic Claude (Haiku-class: fast and cheap) via the Converse API, plus **Bedrock Guardrails**.
+- **Which service:** Amazon Bedrock with **Claude Haiku 5.5** (fast and cheap) via the Converse API, plus **Bedrock Guardrails**. If Claude can't be used, **Amazon Nova Lite** answers instead; if Bedrock is down entirely, a rules-based message.
 - **How it's kept responsible:**
   - It's grounded in an **approved guidance file**: SA emergency numbers, what alerts mean, check-in options. It's told never to invent numbers.
   - **Detection is rule-based.** The AI can't create or cancel an alert.
@@ -133,7 +133,7 @@ Show the **About** page list. Say it plainly:
 - [ ] Main user journey demonstrated
 - [ ] AI demonstrated, with its limits explained
 - [ ] AWS services and their purpose identified
-- [ ] Features tested (39 unit tests + Playwright e2e)
+- [ ] Features tested (42 unit tests + Playwright e2e)
 - [ ] Completed / simulated / outstanding clearly identified (About page, README)
 - [ ] Remaining work documented (section 8)
 - [ ] Backup demo ready (`make local`, screenshots)

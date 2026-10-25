@@ -13,7 +13,13 @@ variable "name" {
 variable "model_id" {
   description = "Bedrock model or inference profile id used by the safety assistant."
   type        = string
-  default     = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+  default     = "eu.anthropic.claude-haiku-5-5"
+}
+
+variable "model_fallback_id" {
+  description = "Model tried when the primary model is refused (e.g. Anthropic access not granted yet)."
+  type        = string
+  default     = "eu.amazon.nova-lite-v1:0"
 }
 
 variable "enable_guardrail" {

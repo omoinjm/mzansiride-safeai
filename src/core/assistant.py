@@ -3,6 +3,7 @@
 - The rules engine decides THAT something happened, and the model only explains it and lists the options.
 - The model is grounded in guidance.md ("approved information") via the system prompt.
 - Optional Bedrock Guardrail (GUARDRAIL_ID / GUARDRAIL_VERSION env) filters harmful content.
+- If the primary model is refused (e.g. model access not granted yet), MODEL_FALLBACK_ID (Amazon Nova) is tried.
 - If Bedrock is unavailable, a deterministic fallback text is returned and labelled as such,
   so the safety workflow never depends on the AI being up.
 """
@@ -14,7 +15,10 @@ from . import rules
 from .log import log
 
 GUIDANCE = (Path(__file__).parent / "guidance.md").read_text()
-MODEL_ID = os.environ.get("MODEL_ID", "eu.anthropic.claude-haiku-4-5-20251001-v1:0")
+MODEL_ID = os.environ.get("MODEL_ID", "eu.anthropic.claude-haiku-5-5")
+MODEL_FALLBACK_ID = os.environ.get("MODEL_FALLBACK_ID", "eu.amazon.nova-lite-v1:0")
+# Errors that mean "this model can't be used here", not "Bedrock is down": try the fallback model.
+_MODEL_REFUSED = {"AccessDeniedException", "ResourceNotFoundException", "ValidationException"}
 MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "500"))
 
 SYSTEM_PROMPT = f"""You are the MzansiRide SafeAI safety assistant inside a ride-sharing prototype for South Africa.
@@ -69,8 +73,20 @@ def _trip_context(trip):
 
 
 def _converse(messages, channel):
+    models = [m for m in (MODEL_ID, MODEL_FALLBACK_ID) if m]
+    for i, model in enumerate(models):
+        try:
+            return _converse_with(model, messages, channel)
+        except Exception as e:
+            code = getattr(e, "response", {}).get("Error", {}).get("Code")
+            if i == len(models) - 1 or code not in _MODEL_REFUSED:
+                raise
+            log("WARN", "bedrock_model_refused", model=model, code=code, error=str(e)[:200])
+
+
+def _converse_with(model, messages, channel):
     kwargs = {
-        "modelId": MODEL_ID,
+        "modelId": model,
         "system": [{"text": SYSTEM_PROMPT}, {"text": CHANNEL_STYLE.get(channel, CHANNEL_STYLE["web"])}],
         "messages": messages,
         "inferenceConfig": {"maxTokens": MAX_TOKENS, "temperature": 0.2},
@@ -84,11 +100,11 @@ def _converse(messages, channel):
     resp = _bedrock().converse(**kwargs)
     text = "".join(c.get("text", "") for c in resp["output"]["message"]["content"]).strip()
     usage = resp.get("usage", {})
-    log("INFO", "bedrock", model=MODEL_ID, channel=channel, stop=resp.get("stopReason"),
+    log("INFO", "bedrock", model=model, channel=channel, stop=resp.get("stopReason"),
         ms=round((time.time() - started) * 1000), in_tokens=usage.get("inputTokens"),
         out_tokens=usage.get("outputTokens"))
     source = "guardrail" if resp.get("stopReason") == "guardrail_intervened" else "bedrock"
-    return {"text": text, "source": source, "model": MODEL_ID}
+    return {"text": text, "source": source, "model": model}
 
 
 def fallback_explanation(event):
