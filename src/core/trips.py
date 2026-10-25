@@ -58,7 +58,8 @@ def public_trip(trip, with_route=True):
     if trip.get("passenger_phone"):
         t["passenger_phone"] = notify.mask(trip["passenger_phone"])
     if trip.get("trusted_contact"):
-        t["trusted_contact"] = {**trip["trusted_contact"], "phone": notify.mask(trip["trusted_contact"].get("phone"))}
+        t["trusted_contact"] = {**trip["trusted_contact"], "phone": notify.mask(trip["trusted_contact"].get("phone")),
+                                "delivery": notify.contact_delivery(trip["trusted_contact"].get("phone"))}
     if with_route:
         t["route"] = places.get_route(trip["pickup"], trip["destination"])
     return t
@@ -127,10 +128,10 @@ def create_trip(body):
 def _link_passenger_whatsapp(trip, phone, sim_session):
     """Proactive check-ins: the passenger gets WhatsApp messages without first sending "TRIP <code>".
 
-    Real WhatsApp only for allow-listed demo numbers (we never message strangers). Any other number is
-    routed to the caller's in-browser WhatsApp simulator, or recorded as simulated when there is none.
+    Real WhatsApp whenever the gateway is connected (the first message counts against the send limits);
+    without it, messages go to the caller's in-browser WhatsApp simulator, or are recorded as simulated.
     """
-    if notify.allowlisted(phone) and notify.whatsapp_enabled():
+    if notify.contact_delivery(phone) == "whatsapp" and notify.take_send_quota(phone):
         chat, channel = f"{notify.msisdn(phone)}@c.us", "whatsapp"
     elif sim_session:
         chat, channel = "sim:" + "".join(c for c in str(sim_session) if c.isalnum() or c == "-")[:40], "simulator"

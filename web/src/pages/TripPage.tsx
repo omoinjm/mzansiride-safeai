@@ -421,6 +421,11 @@ function TrustedContact({ trip, onSaved, onAction }: { trip: Trip; onSaved: (t: 
           <div>
             <p className="font-semibold">{trip.trusted_contact?.name || 'Trusted contact'}</p>
             <p className="font-mono text-sm text-slate-500">{trip.trusted_contact?.phone}</p>
+            {trip.trusted_contact?.delivery === 'whatsapp' ? (
+              <p className="mt-1 text-xs font-semibold text-emerald-700">Gets real WhatsApp alerts</p>
+            ) : (
+              <p className="mt-1 text-xs font-semibold text-amber-700">Alerts simulated: WhatsApp isn't connected here</p>
+            )}
           </div>
           <button className="btn-ghost py-1 text-xs" onClick={() => setEditing(true)}>
             Change
@@ -435,7 +440,7 @@ function TrustedContact({ trip, onSaved, onAction }: { trip: Trip; onSaved: (t: 
           {busy === 'sos' ? <Spinner /> : <Siren size={16} />} SOS
         </button>
       </div>
-      <p className="mt-2 text-[11px] text-slate-500">Notifications are simulated unless the number is on the demo WhatsApp allow-list.</p>
+      <p className="mt-2 text-[11px] text-slate-500">Prototype: alerts go to this number on WhatsApp from our demo number.</p>
     </Section>
   )
 }
@@ -454,7 +459,7 @@ function WhatsAppLink({ trip, config }: { trip: Trip; config: AppConfig | null }
           {trip.whatsapp_channel === 'simulator' && (
             <>
               {' '}
-              Your number isn't on the demo allow-list, so they go to the{' '}
+              WhatsApp isn't connected in this environment, so they go to the{' '}
               <Link to="/whatsapp" className="font-semibold underline">
                 WhatsApp simulator
               </Link>

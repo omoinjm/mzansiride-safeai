@@ -53,13 +53,6 @@ variable "wa_number" {
   sensitive   = true
 }
 
-variable "wa_allowlist" {
-  description = "Phone numbers that may receive unsolicited WhatsApp messages (trusted-contact alerts). Demo team only."
-  type        = list(string)
-  default     = []
-  sensitive   = true
-}
-
 variable "team_code" {
   description = "Code for the operator dashboard. Leave empty to generate one (terraform output -raw team_code)."
   type        = string

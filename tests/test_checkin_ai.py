@@ -184,3 +184,15 @@ def test_whatsapp_messages_are_short(aws, monkeypatch):
         assert len(text) <= 260, text
     check_in = next(t for t in sent if "Are you safe?" in t)
     assert len(check_in) <= 90 and check_in.count("\n") <= 1
+
+
+def test_contact_delivery_is_shown_and_whatsapp_reply_is_honest(aws, monkeypatch):
+    model_says(monkeypatch, "ok")
+    trip = book(safe_mode=True)  # WhatsApp isn't connected in tests: contact alerts are simulated
+    assert trip["trusted_contact"]["delivery"] == "simulated"
+    stop_for(trip["trip_id"], 200)
+    wa(f"trip {trip['trip_id']}", session="hon")
+    reply = wa("2", session="hon")
+    assert "Mom" not in reply.split("\n")[0] and "simulated" in reply
+    monkeypatch.setenv("WHATSAPP_FUNCTION", "wa-fn")
+    assert call("GET", f"/api/trips/{trip['trip_id']}")[1]["trusted_contact"]["delivery"] == "whatsapp"

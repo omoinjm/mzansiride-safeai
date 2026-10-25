@@ -145,7 +145,7 @@ def test_whatsapp_link_prompt_and_reply(aws):
     status, out = call("GET", "/api/whatsapp/outbox", qs={"session": "test1"})
     assert len(out["messages"]) == 2 and "Face ID" in out["messages"][0]["text"]
     assert "Reply *1*" in out["messages"][1]["text"]
-    assert "alerting mom" in wa("help").lower()  # "help" during an open check-in escalates
+    assert "alerting our safety team" in wa("help").lower()  # "help" during an open check-in escalates
     assert "No open check-in" in wa("1")
 
 

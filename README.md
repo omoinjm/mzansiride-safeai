@@ -32,7 +32,7 @@ flowchart LR
         P["Passenger (web app)<br/>book · Safe Journey · check-in"]
         OP["Fleet operator<br/>live fleet · AI triage · acknowledge"]
         PW["Passenger (WhatsApp)<br/>CHECK · TRIP · SOS · 1/2 · AI chat"]
-        TC["Trusted contact<br/>WhatsApp alert (allow-listed)"]
+        TC["Trusted contact<br/>WhatsApp alert"]
         SIM["Journey simulator in the browser<br/>replays real OSM roads · SIMULATED"]
     end
 
@@ -115,7 +115,7 @@ Solid = implemented · dashed orange = simulated in the prototype · dashed grey
 2. `core/rules.py` (pure, unit-tested) flags `PROLONGED_STOP` (no movement for 3 min, away from pickup or destination) or `ROUTE_DEVIATION` (> 250 m from the route for 2 readings in a row). The event is stored as `awaiting_checkin`.
 3. The UI shows **"Are you OK?"**. `POST .../explain` asks Bedrock for a calm, neutral explanation (cached per event). If Bedrock fails, a rules-based text is shown, labelled as a fallback.
 4. **I'm OK** → `resolved_ok`. **I need help** → `escalated` + trusted contact notified. **No answer for 2 min of trip time** → escalated automatically. Every escalation (and SOS) gets an **AI triage** sentence for the operator (`assistant.triage`, rules-based text if Bedrock is down).
-5. If the passenger gave their WhatsApp number when booking (or sent `TRIP <code>`), the same prompt goes to WhatsApp, and replying `1`/`2` resolves it there. Real messages go only to allow-listed numbers; other numbers are routed to the in-browser WhatsApp simulator.
+5. If the passenger gave their WhatsApp number when booking (or sent `TRIP <code>`), the same prompt goes to WhatsApp, and replying `1`/`2` resolves it there. Real messages go to any valid number, with a send limit per number and per day; without the gateway (local mode) they go to the in-browser WhatsApp simulator.
 6. The **Fleet** dashboard shows every live trip: green (normal), amber (waiting for a check-in), red (escalated, nobody has picked it up), blue (operator handling). The operator acknowledges with one click ("Called driver"). **Run demo fleet** drives five simulated trips, one of which goes wrong.
 
 ## Status: completed, simulated and outstanding
@@ -138,7 +138,7 @@ Solid = implemented · dashed orange = simulated in the prototype · dashed grey
 | Waze / Google Maps roads not flagged | ✅ Completed | 35 OSRM alternative roads (`scripts/fetch_routes.py`); off every road but closing on the destination needs 500 m / 4 readings |
 | Regular-trip budget | ✅ Completed | Fare comparison per week / month / year, alone vs shared |
 | Ask AI button + installable web app | ✅ Completed | Floating assistant button on every page; PWA manifest + icons (Add to Home Screen) |
-| Trusted-contact notification | 🧪 Simulated / ✅ real for allow-listed numbers | Real WhatsApp send via OpenWA only to `wa_allowlist` |
+| Trusted-contact notification | ✅ Completed | Real WhatsApp alert via OpenWA to any valid number (20/number/hour, 500/day) |
 | Individual vs shared fare comparison | ✅ Completed | Illustrative pricing rules |
 | AWS-backed workflow | ✅ Completed | Terraform, CI/CD, monitoring |
 | **WhatsApp channel** (team addition) | ✅ Completed | Driver check, trip link, check-ins, SOS, AI chat + web simulator |
@@ -165,7 +165,6 @@ Optional `infra/terraform.tfvars` (git-ignored):
 
 ```hcl
 wa_number    = "+27 82 000 0000"             # the number linked to OpenWA (shown in the app)
-wa_allowlist = ["+27820000001", "+27820000002"] # teammates: may receive trusted-contact alerts
 budget_email = "you@example.com"
 model_id     = "eu.anthropic.claude-haiku-5-5"
 ```

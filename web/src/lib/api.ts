@@ -63,7 +63,7 @@ export const api = {
     req<SafetyEvent>('POST', `/trips/${id}/events/${ev}/ack`, { action }, { 'x-team-code': code }),
 }
 
-/** This browser's WhatsApp simulator chat (also where check-ins go for numbers that aren't allow-listed). */
+/** This browser's WhatsApp simulator chat (also where check-ins go when WhatsApp isn't connected, e.g. local mode). */
 export function waSession() {
   const s = store<string>('mz.waSession', '') || `web-${Math.random().toString(36).slice(2, 10)}`
   save('mz.waSession', s)

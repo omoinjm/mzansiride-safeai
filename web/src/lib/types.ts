@@ -115,7 +115,7 @@ export type Trip = {
   driver: Driver
   status: 'driver_assigned' | 'in_progress' | 'completed' | 'cancelled'
   safe_mode: boolean
-  trusted_contact: { name: string; phone: string } | null
+  trusted_contact: { name: string; phone: string; delivery?: 'whatsapp' | 'simulated' } | null
   created_at: string
   started_at?: string
   events_count: number

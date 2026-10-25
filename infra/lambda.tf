@@ -28,7 +28,6 @@ locals {
     GUARDRAIL_ID      = var.enable_guardrail ? aws_bedrock_guardrail.safety[0].guardrail_id : ""
     GUARDRAIL_VERSION = var.enable_guardrail ? aws_bedrock_guardrail_version.safety[0].version : ""
     WHATSAPP_FUNCTION = var.enable_whatsapp ? local.wa_name : ""
-    WA_ALLOWLIST      = join(",", var.wa_allowlist)
     WA_NUMBER         = var.wa_number
   }
 }

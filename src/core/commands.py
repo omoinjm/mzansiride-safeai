@@ -40,7 +40,11 @@ def handle(text, chat_id):
             return [f"👍 Glad you're safe{heard}. Alert closed."]
         if r["intent"] == "help":
             n = (r["event"].get("notifications") or [{}])[-1]
-            return [f"🚨 Alerting {n.get('to_name', 'your contact')} and our safety team now.\nDanger? Call *10111*."]
+            status = n.get("status")
+            who = n.get("to_name", "your contact") if status not in ("simulated", "no_contact_set", "rate_limited") else None
+            note = {"simulated": "\n_(Contact alert simulated in this demo.)_",
+                    "rate_limited": "\n_(Contact alert not sent: demo message limit reached.)_"}.get(status, "")
+            return [f"🚨 Alerting {who + ' and ' if who else ''}our safety team now.\nDanger? Call *10111*." + note]
         return ["Reply *1* = Safe   *2* = Help"]
 
     if t in GREETINGS:
@@ -83,6 +87,8 @@ def handle(text, chat_id):
         n = ev["notifications"][0]
         if n["status"] == "no_contact_set":
             return ["🚨 SOS recorded, but no trusted contact is set. Call *10111* now."]
+        if n["status"] in ("simulated", "rate_limited"):
+            return [f"🚨 SOS recorded. Call *10111* now.\n_(Alert to {n['to_name']} not sent in this demo.)_"]
         return [f"🚨 SOS sent to {n['to_name']}. Danger? Call *10111* now."]
 
     if t in ("1", "2"):

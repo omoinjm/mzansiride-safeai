@@ -3,8 +3,9 @@
 Only the `whatsapp` Lambda holds the OpenWA credentials, so other code asks it to send by
 invoking it asynchronously ({"action": "send", ...}). The real WhatsApp path is used only when:
   - WhatsApp is enabled (WHATSAPP_FUNCTION set), AND
-  - the recipient either messaged us first (a linked chat) or is on the demo allow-list
-    (WA_ALLOWLIST, comma-separated MSISDNs). This avoids messaging strangers (abuse + ban risk).
+  - unsolicited sends (trusted-contact alerts, the first message to a passenger's number) are under a
+    rate limit per number and per day: the public demo can message any number, so this caps abuse
+    and protects the bot's WhatsApp number from being restricted.
 Everything else is recorded as SIMULATED, which is what the web UI and dashboard show.
 Chats whose id starts with "sim:" belong to the in-browser WhatsApp simulator and go to its outbox.
 """
@@ -35,9 +36,31 @@ def mask(phone):
     return f"+{d[:4]}•••{d[-3:]}" if len(d) >= 7 else "•••"
 
 
-def allowlisted(phone):
-    allow = {msisdn(p) for p in os.environ.get("WA_ALLOWLIST", "").split(",") if p.strip()}
-    return bool(msisdn(phone)) and msisdn(phone) in allow
+PER_NUMBER_PER_HOUR = int(os.environ.get("WA_LIMIT_PER_NUMBER_HOUR", "20"))
+PER_DAY = int(os.environ.get("WA_LIMIT_PER_DAY", "500"))
+
+
+def _count(pk, hours):
+    """Atomic counter in the whatsapp table (expires on its own). Returns the new value."""
+    resp = store.table("whatsapp").update_item(
+        Key={"pk": pk}, UpdateExpression="ADD n :one SET #t = if_not_exists(#t, :ttl)",
+        ExpressionAttributeNames={"#t": "ttl"},
+        ExpressionAttributeValues={":one": 1, ":ttl": int(time.time()) + hours * 3600}, ReturnValues="UPDATED_NEW")
+    return int(resp["Attributes"]["n"])
+
+
+def take_send_quota(phone):
+    """Spend one unsolicited message to this number; False when over the hourly or daily limit."""
+    hour, day = time.strftime("%Y%m%d%H", time.gmtime()), time.strftime("%Y%m%d", time.gmtime())
+    ok = _count(f"rate#{msisdn(phone)}#{hour}", 2) <= PER_NUMBER_PER_HOUR and _count(f"rate#all#{day}", 48) <= PER_DAY
+    if not ok:
+        log("WARN", "whatsapp_rate_limited", to=mask(phone))
+    return ok
+
+
+def contact_delivery(phone):
+    """How alerts to this number are delivered: real WhatsApp, or recorded as simulated (WhatsApp not connected)."""
+    return "whatsapp" if msisdn(phone) and whatsapp_enabled() else "simulated"
 
 
 def whatsapp_enabled():
@@ -119,8 +142,9 @@ def notify_trusted_contact(trip, event, reason):
     }
     if not phone:
         record.update(channel="none", status="no_contact_set")
-    elif allowlisted(phone) and whatsapp_enabled():
-        record.update(channel="whatsapp", status=send_whatsapp(f"{msisdn(phone)}@c.us", text))
+    elif contact_delivery(phone) == "whatsapp":
+        status = send_whatsapp(f"{msisdn(phone)}@c.us", text) if take_send_quota(phone) else "rate_limited"
+        record.update(channel="whatsapp", status=status)
     else:
         record.update(channel="whatsapp", status="simulated")
     log("INFO", "contact_notified", trip=trip["trip_id"], reason=reason, status=record["status"],

@@ -87,7 +87,7 @@ Quick tour (or fold into the demo): **Ride** (booking + fare comparison) → **T
 5. Backup ready: `make local` on the laptop (works offline except the map tiles), plus `docs/screenshots/`.
 
 ### Script
-Before the demo, on the **Ride** page put the **spare-phone / teammate's number** (allow-listed) in *Your WhatsApp* so the real messages arrive on a phone you can show. If WhatsApp isn't set up, any other number sends them to the **WhatsApp simulator** page instead: keep it open in a second tab.
+Before the demo, on the **Ride** page put **your own or your teammate's number** in *Your WhatsApp* so the real messages arrive on a phone you can show. If WhatsApp isn't set up, any other number sends them to the **WhatsApp simulator** page instead: keep it open in a second tab.
 
 | Time | Do | Say |
 |---|---|---|
@@ -116,7 +116,7 @@ Before the demo, on the **Ride** page put the **spare-phone / teammate's number*
 ## 8. Completed / simulated / outstanding (B, 0:45)
 Show the **About** page list. Say it plainly:
 - **Completed:** booking, journey + Safe Journey Mode, both rules, proactive WhatsApp check-ins + escalation, Bedrock assistant + Guardrail, AI triage + fleet dashboard with operator acknowledge, fare comparison, WhatsApp channel, Terraform + CI/CD + monitoring.
-- **Simulated:** trip positions and speed (no live GPS), the demo fleet, drivers, vehicles and safety scores (demo registry), notifications and operator actions such as "Escalated to SAPS" (real WhatsApp only for our allow-listed numbers).
+- **Simulated:** trip positions and speed (no live GPS), the demo fleet, drivers, vehicles and safety scores (demo registry), notifications and operator actions such as "Escalated to SAPS" (real WhatsApp messages from our prototype number, rate-limited).
 - **Outstanding / next:** Cognito accounts, live GPS with Amazon Location Service, multilingual assistant (isiZulu, Sesotho, Afrikaans), official WhatsApp Business API (AWS End User Messaging Social) to replace OpenWA, and operator partnerships for verified drivers and emergency response.
 
 ## Business model: "How it pays for itself" (A, 0:45, slide after "Safer and more affordable")

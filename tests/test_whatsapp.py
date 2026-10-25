@@ -56,16 +56,18 @@ def test_webhook_flow(aws, monkeypatch):
     assert sent and "MzansiRide" in sent[0][1]
 
 
-def test_notify_allowlist(aws, monkeypatch):
+def test_notify_any_number_with_send_limits(aws, monkeypatch):
     from core import notify
     trip = {"trip_id": "MZTEST", "passenger_name": "Thandi", "driver": {}, "trusted_contact": {"name": "Mom", "phone": "082 555 0101"}}
-    assert notify.notify_trusted_contact(trip, None, "passenger_sos")["status"] == "simulated"
+    assert notify.notify_trusted_contact(trip, None, "passenger_sos")["status"] == "simulated"  # WhatsApp not connected
     monkeypatch.setenv("WHATSAPP_FUNCTION", "wa-fn")
-    monkeypatch.setenv("WA_ALLOWLIST", "+27 82 555 0101")
     monkeypatch.setattr(notify, "send_whatsapp", lambda chat, text: f"queued:{chat}")
-    r = notify.notify_trusted_contact(trip, None, "passenger_sos")
+    r = notify.notify_trusted_contact(trip, None, "passenger_sos")  # any valid number, no allow-list
     assert r["status"] == "queued:27825550101@c.us"
     assert notify.msisdn("+27 (82) 555-0101") == "27825550101"
+    monkeypatch.setattr(notify, "PER_NUMBER_PER_HOUR", 3)
+    statuses = [notify.notify_trusted_contact(trip, None, "passenger_sos")["status"] for _ in range(3)]
+    assert statuses[-1] == "rate_limited" and statuses[0].startswith("queued")
 
 
 def test_lid_chats_map_back_to_the_phone_chat(aws, monkeypatch):

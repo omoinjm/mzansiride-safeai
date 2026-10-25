@@ -178,7 +178,7 @@ export default function BookPage() {
           </label>
         </div>
         <p className="-mt-2 text-[11px] text-slate-500">
-          Optional: we'll check in on WhatsApp if the trip looks unusual. Demo numbers get real messages; others go to the <a className="underline" href="/whatsapp">WhatsApp simulator</a>.
+          Optional: we'll check in on WhatsApp if the trip looks unusual. Messages come from our prototype number.
         </p>
 
         <div className="rounded-xl border border-slate-200 p-3">
