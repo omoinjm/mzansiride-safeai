@@ -39,6 +39,11 @@ def public(d):
                               "registered_since", "status", "safety_score") if k in d}
 
 
+def biometric_enrolled(d):
+    """Demo flag: has this driver enrolled Face ID / fingerprint on their phone? (stored as a string in DynamoDB)"""
+    return str(d.get("biometric_enrolled", "")).lower() == "true"
+
+
 def lookup(query):
     """Returns {"query", "matches": [...], "verdict": "registered|caution|not_found", "advice"}."""
     q = (query or "").strip()
@@ -90,3 +95,16 @@ def format_lookup(result):
     lines.append(result["advice"])
     lines.append("_Demo registry: simulated records, not an official police check._")
     return "\n".join(lines)
+
+
+def photo_check(image_bytes, mime):
+    """Plate photo -> registry lookup. Used by the app and WhatsApp; the photo is not stored."""
+    from . import assistant  # avoid an import cycle at module load
+
+    read = assistant.read_plate(image_bytes, mime)
+    if not read["plate"]:
+        return {"plate": None, "lookup": None, "source": read["source"], "stored": False,
+                "advice": "I couldn't read a number plate in that photo. Try again closer to the plate, "
+                          "or type it: CHECK <plate>."}
+    return {"plate": read["plate"], "lookup": lookup(read["plate"]), "source": read["source"],
+            "model": read["model"], "stored": False}

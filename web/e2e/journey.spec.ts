@@ -18,7 +18,7 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
 
   await expect(page.getByText('Your driver')).toBeVisible()
   await expect(page.getByText(/Check-ins arrive there automatically|also arrive on WhatsApp/)).toBeVisible()
-  await page.getByRole('button', { name: /Check plate/ }).click()
+  await page.getByRole('button', { name: /Check plate in/ }).click()
   await expect(page.getByText(/registered with MzansiRide/)).toBeVisible()
   await page.screenshot({ path: `${shots}/02-driver.png` })
   await page.getByRole('button', { name: /Start trip/ }).click()
@@ -30,9 +30,13 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
   await expect(dialog).toBeVisible({ timeout: 30_000 })
   await expect(dialog.getByText(/Prolonged stop/)).toBeVisible()
   await expect(dialog.locator('.animate-pulse').first()).toBeHidden({ timeout: 30_000 }) // AI text loaded
+  await dialog.getByLabel("Or tell us what's happening").fill('We stopped for petrol, all good')
   await page.screenshot({ path: `${shots}/03-checkin-stop.png` })
-  await dialog.getByRole('button', { name: "I'm OK" }).click()
-  await expect(dialog).toBeHidden()
+  await dialog.getByRole('button', { name: 'Send reply' }).click()
+  // Live: the AI reads this as OK and the alert closes. Local mode has no AI, so it asks again: tap I'm OK.
+  await expect(page.getByText(/wasn't sure|Understood:/).first()).toBeVisible({ timeout: 30_000 })
+  if (await dialog.getByText(/wasn't sure/).isVisible()) await dialog.getByRole('button', { name: "I'm OK" }).click()
+  await expect(dialog).toBeHidden({ timeout: 30_000 })
 
   await page.waitForTimeout(3000)
   await page.getByRole('button', { name: /Simulate off-route/ }).click()
@@ -69,6 +73,33 @@ test('fleet dashboard: demo fleet → unanswered check-in turns red with AI tria
   // Sarah's car is still stopped, so a newer alert may already be open: just check the ack was recorded.
   await expect(page.getByText(/✔ Called driver/).first()).toBeVisible({ timeout: 10_000 })
   await page.getByRole('button', { name: 'Stop demo fleet' }).click()
+})
+
+test('driver card: Face ID result and plate photo check', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Request simulated ride/ }).click()
+  await expect(page.getByText(/unlocks the app with Face ID when the ride starts/)).toBeVisible()
+
+  // A plate photo drawn in the browser, so the test needs no image files.
+  const png = await page.evaluate(() => {
+    const c = document.createElement('canvas')
+    c.width = 480
+    c.height = 140
+    const g = c.getContext('2d')!
+    g.fillStyle = '#facc15'
+    g.fillRect(0, 0, 480, 140)
+    g.fillStyle = '#111'
+    g.font = 'bold 72px sans-serif'
+    g.fillText('BX 33 KK GP', 20, 95)
+    return c.toDataURL('image/png').split(',')[1]
+  })
+  await page.getByLabel('Number plate photo').first().setInputFiles({ name: 'plate.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
+  // Live: Bedrock reads it and the registry says caution. Local mode (no AI): asks to type the plate.
+  await expect(page.getByText(/AI read the plate as|couldn't read a number plate/)).toBeVisible({ timeout: 30_000 })
+
+  await page.getByRole('button', { name: /Start trip/ }).click()
+  await expect(page.getByText(/(Driver verified|Driver not verified) with Face ID/).first()).toBeVisible()
+  await page.screenshot({ path: `${shots}/11-driver-checks.png`, fullPage: true })
 })
 
 test('WhatsApp simulator: driver check and AI question', async ({ page }) => {

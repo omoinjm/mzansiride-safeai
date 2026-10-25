@@ -13,14 +13,12 @@ MENU = (
     "*TRIP <code>*: link this chat to your trip for safety check-ins\n"
     "*STATUS*: your linked trip\n"
     "*SOS*: alert your trusted contact now\n"
-    "*1* / *2*: answer a check-in (OK / need help)\n"
+    "*1* / *2*: answer a check-in (OK / need help), or just tell me what's happening\n"
     "Or just describe your situation and our AI safety assistant will guide you.\n\n"
     "In danger? Call *10111* or *112*. (Prototype: simulated trips and drivers.)"
 )
 
 GREETINGS = {"hi", "hello", "hey", "help", "menu", "start", "sawubona", "dumela", "hallo", "molo", "howzit"}
-OK_WORDS = {"1", "ok", "okay", "im ok", "i'm ok", "i am ok", "fine", "safe", "yes"}
-HELP_WORDS = {"2", "need help", "i need help", "help me", "not ok", "no"}
 
 
 def _norm(text):
@@ -35,15 +33,20 @@ def handle(text, chat_id):
     pending = link.get("pending_event_id") if link else None
 
     # An open check-in takes priority: a stressed passenger typing "help" must escalate, not get a menu.
-    if pending and (t in OK_WORDS or t in HELP_WORDS or t == "help"):
-        response = "ok" if t in OK_WORDS else "help"
-        ev = trips.checkin(link["trip_id"], pending, response, channel="whatsapp")
-        if response == "ok":
-            return ["👍 Thanks, glad you're OK. The alert is closed. I'll keep watching the trip."]
-        n = (ev.get("notifications") or [{}])[-1]
-        return [f"🚨 Understood. Your trusted contact ({n.get('to_name', 'contact')}) is being notified with your "
-                "trip and last location.\nIf you are in danger call *10111* or *112* now. "
-                "If it's safe, ask to stop at a busy public place."]
+    # Anything typed while a check-in is open is read as the answer (1/2, or their own words via the AI).
+    if pending and not (t in GREETINGS - {"help"} or re.match(r"^(check|verify|driver|plate|trip|link)\s", t)
+                        or t in ("status", "sos", "stop", "unlink")):
+        r = trips.reply(link["trip_id"], pending, text, channel="whatsapp")
+        if r["intent"] == "ok":
+            heard = "" if r["source"] == "rules" else f"Got it: _{r['reason']}_. "
+            return [f"👍 {heard}Glad you're OK. The alert is closed. I'll keep watching the trip."]
+        if r["intent"] == "help":
+            n = (r["event"].get("notifications") or [{}])[-1]
+            return [f"🚨 Understood. Your trusted contact ({n.get('to_name', 'contact')}) and our safety team are "
+                    "being alerted with your trip and last location.\nIf you are in danger call *10111* or *112* now. "
+                    "If it's safe, ask to stop at a busy public place."]
+        return ["Just to be sure: reply *1* if you're safe, or *2* if you need help. "
+                "If we don't hear back, your trusted contact will be alerted."]
 
     if t in GREETINGS:
         return [MENU]

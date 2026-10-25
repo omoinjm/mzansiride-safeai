@@ -146,7 +146,7 @@ def checkin_prompt(trip, event, explanation):
     return (
         f"⚠️ Hi {first_name(trip)}, we noticed your trip to {trip.get('destination_name')} "
         f"{NOTICED.get(event.get('type'), 'looks unusual')}. *Are you safe?*\n\n{explanation}\n\n"
-        "Reply *1* = YES, I'm OK\nReply *2* = HELP (alerts your trusted contact)\n"
+        "Reply *1* = YES, I'm OK\nReply *2* = HELP (alerts your trusted contact)\nOr just tell me what's happening.\n"
         f"Trip {trip['trip_id']}. In danger? Call 10111 or 112."
     )
 

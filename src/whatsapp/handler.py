@@ -8,6 +8,7 @@ Two entry points in one function:
    {"action": "process", "chat_id", "text"}      run the command/assistant logic and reply
    {"action": "send", "chat_id", "text"}         send one message
    {"action": "checkin_prompt", "trip_id", "event_id"}   AI-explained check-in prompt to the linked chat
+   {"action": "photo", "chat_id", "image"?, "mime"?}       plate photo -> registry check (image only if inline)
 """
 import base64
 import json
@@ -15,7 +16,7 @@ import time
 
 import boto3
 
-from core import commands, notify, store, trips
+from core import commands, drivers, notify, store, trips
 from core.log import log
 from whatsapp import openwa
 
@@ -50,6 +51,19 @@ def _phone_chat(chat_id, data):
     return known["chat"] if known else chat_id
 
 
+MAX_INLINE_IMAGE = 240_000  # async Lambda payloads are capped at 256 KB
+
+
+def _inline_image(data):
+    """(base64, mime) if the webhook carries the image itself, else (None, None)."""
+    media = data.get("media") if isinstance(data.get("media"), dict) else {}
+    b64 = media.get("data") or data.get("mediaData") or data.get("base64")
+    mime = media.get("mimetype") or data.get("mimetype") or data.get("mediaMimetype") or "image/jpeg"
+    if isinstance(b64, str) and b64.startswith("data:"):
+        mime, b64 = b64[5:].split(";", 1)[0], b64.split(",", 1)[-1]
+    return (b64, mime) if isinstance(b64, str) and 0 < len(b64) <= MAX_INLINE_IMAGE else (None, None)
+
+
 def _send(chat_id, text):
     try:
         _remember_lid(chat_id, openwa.send_text(chat_id, text))
@@ -67,6 +81,15 @@ def handle_action(event):
         trip = trips.get_trip(event["trip_id"])
         if trip.get("wa_chat_id"):
             _send(trip["wa_chat_id"], trips.whatsapp_prompt_text(event["trip_id"], event["event_id"]))
+    elif action == "photo":
+        if not event.get("image"):
+            _send(event["chat_id"], "📷 I can't read photos on WhatsApp yet. Type the plate instead: *CHECK CA 123-456*, "
+                                    "or use *Check plate from a photo* in the MzansiRide app.")
+        else:
+            r = drivers.photo_check(base64.b64decode(event["image"]), event.get("mime") or "image/jpeg")
+            _send(event["chat_id"], (f"📷 I read the plate as *{r['plate']}*.\n\n" + drivers.format_lookup(r["lookup"]))
+                  if r["plate"] else r["advice"])
+            log("INFO", "plate_photo", read=bool(r["plate"]), channel="whatsapp")
     elif action == "process":
         started = time.time()
         replies = commands.handle(event["text"], event["chat_id"])
@@ -97,6 +120,16 @@ def handle_webhook(event, context):
     if raw_chat != chat_id or raw_chat.endswith("@lid"):
         log("INFO", "webhook_lid", mapped=raw_chat != chat_id, keys=sorted(data))
     text = data.get("body") if data.get("type", "text") == "text" else ""
+    if data.get("type") == "image":
+        image, mime = _inline_image(data)
+        log("INFO", "webhook_image", keys=sorted(data), inline=bool(image))
+        key = payload.get("idempotencyKey") or data.get("id")
+        if key and not store.put_once("whatsapp", {"pk": f"dedupe#{key}", "ttl": store.ttl_days(1)}):
+            return _ok()
+        boto3.client("lambda").invoke(
+            FunctionName=context.function_name, InvocationType="Event",
+            Payload=json.dumps({"action": "photo", "chat_id": chat_id, "image": image, "mime": mime}).encode())
+        return _ok()
 
     key = payload.get("idempotencyKey") or data.get("id")
     if key and not store.put_once("whatsapp", {"pk": f"dedupe#{key}", "ttl": store.ttl_days(1)}):

@@ -18,8 +18,9 @@ def test_booking_with_whatsapp_number_links_without_trip_code(aws):
 
     stop_for(trip["trip_id"], 200)
     prompt = outbox("fleet1")
-    assert len(prompt) == 1 and "Hi Thandi, we noticed your trip to Sandton" in prompt[0]
-    assert "Reply *2* = HELP" in prompt[0]
+    assert "Face ID" in prompt[0]  # start-of-ride driver check (simulated)
+    assert len(prompt) == 2 and "Hi Thandi, we noticed your trip to Sandton" in prompt[1]
+    assert "Reply *2* = HELP" in prompt[1]
 
 
 def test_invalid_passenger_number_rejected(aws):

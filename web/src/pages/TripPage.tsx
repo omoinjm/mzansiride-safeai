@@ -89,6 +89,7 @@ export default function TripPage() {
         setActive({ event: res.new_events[0], startedAt: sentAt })
         setEvents((ev) => [...ev, ...res.new_events])
       }
+      if (res.reminded?.length) flash('Reminder sent: please answer the check-in')
       if (res.escalated.length) {
         flash('No check-in response: trusted contact notified')
         refresh()
@@ -170,7 +171,7 @@ export default function TripPage() {
 
           {trip.status === 'driver_assigned' && (
             <Section title="Your driver" icon={<UserRound size={18} className="text-brand-600" />}>
-              <DriverCard driver={trip.driver} />
+              <DriverCard driver={trip.driver} check={trip.driver_check} />
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
                 <div>
                   <p className="text-sm text-slate-500">{trip.ride_type === 'shared' ? `Shared ride · ${trip.riders} riders` : 'Individual ride'}</p>
@@ -220,7 +221,7 @@ export default function TripPage() {
           <WhatsAppLink trip={trip} config={config} />
           {trip.status !== 'driver_assigned' && (
             <Section title="Driver" icon={<UserRound size={18} className="text-brand-600" />}>
-              <DriverCard driver={trip.driver} />
+              <DriverCard driver={trip.driver} check={trip.driver_check} />
             </Section>
           )}
           <Link to="/assistant" className="card flex items-center gap-3 p-4 hover:border-brand-300">
@@ -240,6 +241,16 @@ export default function TripPage() {
           timeoutS={config?.checkin_timeout_s ?? 120}
           promptStartedAt={active.startedAt}
           onRespond={respond}
+          onReplied={(r) => {
+            setActive(null)
+            if (r.intent === 'ok') {
+              sim.current?.resume()
+              flash(`Understood: ${r.reason || "you're OK"}. Alert closed.`)
+            } else {
+              flash('Help requested: trusted contact and safety team alerted')
+            }
+            refresh()
+          }}
         />
       )}
     </div>
@@ -476,6 +487,7 @@ function EventsTimeline({ events }: { events: SafetyEvent[] }) {
               </div>
               {(e.type === 'PROLONGED_STOP' || e.type === 'ROUTE_DEVIATION') && <p className="mt-1 text-sm text-slate-600">{describe(e)}</p>}
               <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                {e.reminded_at && <span>Reminder sent</span>}
                 {e.response && (
                   <span>
                     Response: <strong>{e.response === 'ok' ? "I'm OK" : 'Need help'}</strong> via {e.response_channel}
@@ -485,6 +497,12 @@ function EventsTimeline({ events }: { events: SafetyEvent[] }) {
                 {e.prompt_ms != null && <span>Prompt shown in {e.prompt_ms} ms</span>}
                 {e.triage && <span>Operator safety team alerted{e.operator_ack ? ` · ${e.operator_ack.action.toLowerCase()}` : ''}</span>}
               </div>
+              {e.response_text && (
+                <p className="mt-2 rounded-lg bg-slate-50 p-2 text-xs">
+                  “{e.response_text}” <span className="text-slate-500">· understood as {e.response === 'ok' ? 'OK' : 'needs help'}
+                  {e.response_reason ? `: ${e.response_reason}` : ''} ({e.response_understood_by === 'rules' ? 'rules' : 'AI'})</span>
+                </p>
+              )}
               {e.notifications?.map((n, i) => (
                 <div key={i} className="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 p-2 text-xs">
                   <Bell size={14} className="text-slate-500" />

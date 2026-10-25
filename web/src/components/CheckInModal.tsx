@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Phone, ShieldAlert, Sparkles } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Phone, Send, ShieldAlert, Sparkles } from 'lucide-react'
 import { api } from '../lib/api'
-import type { AiResult, SafetyEvent } from '../lib/types'
+import type { AiResult, CheckinReply, SafetyEvent } from '../lib/types'
 import { AiSource, RichText, SimBadge, Spinner } from './ui'
 import { EVENT_LABEL, describe, fmtDuration } from '../lib/format'
 
@@ -11,15 +11,19 @@ export default function CheckInModal({
   timeoutS,
   promptStartedAt,
   onRespond,
+  onReplied,
 }: {
   event: SafetyEvent
   tripTs: number
   timeoutS: number
   promptStartedAt: number
   onRespond: (response: 'ok' | 'help', promptMs: number) => Promise<void>
+  onReplied: (r: CheckinReply) => void
 }) {
   const [ai, setAi] = useState<AiResult | null>(null)
-  const [busy, setBusy] = useState<'ok' | 'help' | null>(null)
+  const [busy, setBusy] = useState<'ok' | 'help' | 'text' | null>(null)
+  const [text, setText] = useState('')
+  const [unclear, setUnclear] = useState('')
   const promptMs = useRef<number>(0)
 
   useEffect(() => {
@@ -42,6 +46,21 @@ export default function CheckInModal({
     setBusy(r)
     try {
       await onRespond(r, promptMs.current)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function sendText(e: React.FormEvent) {
+    e.preventDefault()
+    if (!text.trim()) return
+    setBusy('text')
+    try {
+      const r = await api.reply(event.trip_id, event.event_id, text)
+      if (r.intent === 'unclear') {
+        setUnclear("Sorry, I wasn't sure what you meant. Tap I'm OK or I need help, so we don't guess.")
+        setText('')
+      } else onReplied(r)
     } finally {
       setBusy(null)
     }
@@ -101,6 +120,26 @@ export default function CheckInModal({
             {busy === 'help' ? <Spinner /> : <ShieldAlert size={20} />} I need help
           </button>
         </div>
+        <form onSubmit={sendText} className="mt-3">
+          <label className="text-xs font-semibold text-slate-600" htmlFor="checkin-text">
+            Or tell us what's happening
+          </label>
+          <div className="mt-1 flex gap-2">
+            <input
+              id="checkin-text"
+              className="input"
+              placeholder="e.g. We took a detour, still going to Sandton"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={300}
+            />
+            <button className="btn-secondary shrink-0" disabled={!text.trim() || !!busy} aria-label="Send reply">
+              {busy === 'text' ? <Spinner /> : <Send size={16} />}
+            </button>
+          </div>
+          {unclear && <p className="mt-1 text-xs font-semibold text-amber-800">{unclear}</p>}
+          <p className="mt-1 text-[11px] text-slate-500">AI reads your words. If it isn't sure, it asks again: it never assumes you're OK.</p>
+        </form>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <a className="btn-secondary" href="tel:10111">
             <Phone size={16} /> SAPS 10111

@@ -7,7 +7,9 @@
 - If Bedrock is unavailable, a deterministic fallback text is returned and labelled as such,
   so the safety workflow never depends on the AI being up.
 """
+import json
 import os
+import re
 import time
 from pathlib import Path
 
@@ -72,11 +74,11 @@ def _trip_context(trip):
     )
 
 
-def _converse(messages, channel, system=None, max_tokens=None):
+def _converse(messages, channel, system=None, max_tokens=None, guard=True):
     models = [m for m in (MODEL_ID, MODEL_FALLBACK_ID) if m]
     for i, model in enumerate(models):
         try:
-            return _converse_with(model, messages, channel, system, max_tokens)
+            return _converse_with(model, messages, channel, system, max_tokens, guard)
         except Exception as e:
             code = getattr(e, "response", {}).get("Error", {}).get("Code")
             if i == len(models) - 1 or code not in _MODEL_REFUSED:
@@ -84,7 +86,7 @@ def _converse(messages, channel, system=None, max_tokens=None):
             log("WARN", "bedrock_model_refused", model=model, code=code, error=str(e)[:200])
 
 
-def _converse_with(model, messages, channel, system=None, max_tokens=None):
+def _converse_with(model, messages, channel, system=None, max_tokens=None, guard=True):
     kwargs = {
         "modelId": model,
         "system": [{"text": system}] if system else
@@ -92,7 +94,7 @@ def _converse_with(model, messages, channel, system=None, max_tokens=None):
         "messages": messages,
         "inferenceConfig": {"maxTokens": max_tokens or MAX_TOKENS, "temperature": 0.2},
     }
-    if os.environ.get("GUARDRAIL_ID"):
+    if guard and os.environ.get("GUARDRAIL_ID"):
         kwargs["guardrailConfig"] = {
             "guardrailIdentifier": os.environ["GUARDRAIL_ID"],
             "guardrailVersion": os.environ.get("GUARDRAIL_VERSION", "DRAFT"),
@@ -152,7 +154,9 @@ def _triage_facts(trip, event, reason):
         f"Escalated because {TRIAGE_REASONS.get(reason, reason)}. "
         f"Check-in channel: {'WhatsApp' if trip.get('wa_chat_id') else 'app only'}. "
         f"Driver {d.get('name')}, safety score {d.get('safety_score', 'n/a')}/100, rating {d.get('rating')}, "
-        f"registry status {d.get('status')}. Last speed {pos.get('speed_kmh', 'unknown')} km/h. "
+        f"registry status {d.get('status')}, start-of-ride Face ID check "
+        f"{(trip.get('driver_check') or {}).get('status', 'not done')} (simulated). "
+        f"Last speed {pos.get('speed_kmh', 'unknown')} km/h. "
         f"Trusted contact {'notified' if trip.get('trusted_contact') else 'not set'}."
     )
 
@@ -172,6 +176,71 @@ def triage(trip, event, reason):
     except Exception as e:
         log("WARN", "bedrock_fallback", error=str(e)[:300], kind="triage")
         return {"text": fallback_triage(trip, event, reason), "source": "fallback", "model": None}
+
+
+# ---------- passenger replies to a check-in, in their own words ----------
+
+CHECKIN_REPLY_PROMPT = """A ride-share passenger was asked "Are you safe?" after a safety alert on their trip.
+Classify their reply. Answer with JSON only: {"intent": "ok" | "help" | "unclear", "reason": "<max 12 words>"}
+- "ok": they clearly say they are safe or explain a harmless reason (detour, traffic, fuel, stopping for a friend).
+- "help": any sign of danger, fear, threat, injury, being held, the driver refusing to stop, or a request for help.
+- "unclear": anything else, mixed signals, jokes, or not about their safety.
+When in doubt between ok and anything else, choose "unclear". Never guess "ok"."""
+
+# Deterministic guard rails around the model: obvious danger is "help" without asking the AI, and the
+# model can never turn a reply containing these words into "ok".
+DANGER = re.compile(r"\b(help|knife|gun|weapon|scared|afraid|hurt|attack|rape|kidnap|locked|won'?t (stop|let)|"
+                    r"not safe|unsafe|danger|threat|police|emergency|sos)\b")
+OK_EXACT = {"1", "ok", "okay", "im ok", "i'm ok", "i am ok", "fine", "safe", "yes", "all good", "im fine", "i'm fine"}
+HELP_EXACT = {"2", "need help", "i need help", "help me", "not ok", "no", "help"}
+
+
+def classify_checkin_reply(text, trip=None, event=None):
+    """{"intent": ok|help|unclear, "reason", "source", "model"}. Unclear never closes an alert."""
+    t = re.sub(r"\s+", " ", (text or "").strip().lower().replace("’", "'")).strip(" .!")
+    if t in HELP_EXACT or DANGER.search(t):
+        return {"intent": "help", "reason": "asked for help" if t in HELP_EXACT else "mentions danger",
+                "source": "rules", "model": None}
+    if t in OK_EXACT:
+        return {"intent": "ok", "reason": "said they are OK", "source": "rules", "model": None}
+    alert = rules.describe(event) if event and event.get("type") in ("PROLONGED_STOP", "ROUTE_DEVIATION") else ""
+    try:
+        out = _converse([{"role": "user", "content": [{"text": f"Alert: {alert}\nPassenger reply: {text[:500]}"}]}],
+                        "checkin_reply", system=CHECKIN_REPLY_PROMPT, max_tokens=80)
+        data = json.loads(re.search(r"\{.*\}", out["text"], re.S).group(0))
+        intent = data.get("intent") if data.get("intent") in ("ok", "help", "unclear") else "unclear"
+        return {"intent": intent, "reason": str(data.get("reason") or "")[:100], "source": out["source"],
+                "model": out["model"]}
+    except Exception as e:
+        log("WARN", "checkin_reply_unclassified", error=str(e)[:200])
+        return {"intent": "unclear", "reason": "could not understand the reply", "source": "fallback", "model": None}
+
+
+# ---------- number plate from a photo ----------
+
+PLATE_PROMPT = """You read vehicle number plates from photos for a ride-share safety check in South Africa.
+Reply with ONLY the registration text on the plate exactly as written (letters, digits, spaces, hyphens),
+e.g. "CA 123-456" or "JK 45 PL GP". If no plate is clearly readable, reply NONE.
+Do not describe people or anything else in the image."""
+IMAGE_FORMATS = {"image/jpeg": "jpeg", "image/jpg": "jpeg", "image/png": "png", "image/webp": "webp"}
+
+
+def read_plate(image_bytes, mime):
+    """{"plate": str|None, "source", "model"}. The image is sent to Bedrock and never stored."""
+    fmt = IMAGE_FORMATS.get((mime or "").lower())
+    if not fmt:
+        raise ValueError("Send a JPEG, PNG or WebP photo")
+    msgs = [{"role": "user", "content": [{"image": {"format": fmt, "source": {"bytes": image_bytes}}},
+                                         {"text": "What does the number plate say?"}]}]
+    try:
+        # No Guardrail here: it filters text, and the prompt only asks for plate characters.
+        out = _converse(msgs, "plate_photo", system=PLATE_PROMPT, max_tokens=30, guard=False)
+    except Exception as e:
+        log("WARN", "bedrock_fallback", error=str(e)[:300], kind="plate_photo")
+        return {"plate": None, "source": "fallback", "model": None}
+    text = out["text"].strip().strip('"').upper()
+    plate = None if not text or "NONE" in text or len(text) > 16 else text
+    return {"plate": plate, "source": out["source"], "model": out["model"]}
 
 
 def chat(message, trip=None, history=None, channel="web"):

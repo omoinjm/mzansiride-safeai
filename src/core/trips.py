@@ -8,7 +8,8 @@ from datetime import datetime
 from . import assistant, drivers, fares, geo, notify, places, rules, store
 from .log import log
 
-CHECKIN_TIMEOUT_S = int(os.environ.get("CHECKIN_TIMEOUT_S", "120"))  # trip-time seconds without an answer
+CHECKIN_TIMEOUT_S = int(os.environ.get("CHECKIN_TIMEOUT_S", "120"))  # default wait window (trip seconds); operator can change it
+TIMEOUT_RANGE = (60, 600)
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I: easy to type on WhatsApp
 OPEN = "awaiting_checkin"
 FLEET_STALE_S = 15 * 60  # an in-progress trip without telemetry for this long drops off the live fleet view
@@ -24,6 +25,24 @@ class BadRequest(Exception):
 
 def _code():
     return "MZ" + "".join(random.choice(CODE_ALPHABET) for _ in range(4))
+
+
+def get_ops_config():
+    """Operator settings (Fleet page). Only the check-in wait window for now."""
+    item = store.get("whatsapp", {"pk": "config#ops"}) or {}
+    return {"checkin_timeout_s": int(item.get("checkin_timeout_s") or CHECKIN_TIMEOUT_S)}
+
+
+def set_ops_config(body):
+    try:
+        timeout = int(body.get("checkin_timeout_s"))
+    except (TypeError, ValueError):
+        raise BadRequest("checkin_timeout_s must be a number of seconds")
+    if not TIMEOUT_RANGE[0] <= timeout <= TIMEOUT_RANGE[1]:
+        raise BadRequest(f"checkin_timeout_s must be between {TIMEOUT_RANGE[0]} and {TIMEOUT_RANGE[1]}")
+    store.put("whatsapp", {"pk": "config#ops", "checkin_timeout_s": timeout, "updated_at": notify.now_iso()})
+    log("INFO", "ops_config", checkin_timeout_s=timeout)
+    return get_ops_config()
 
 
 def get_trip(trip_id):
@@ -146,10 +165,28 @@ def set_trusted_contact(trip_id, contact):
     return update_trip(trip_id, trusted_contact=value)
 
 
+def _driver_check(trip):
+    """SIMULATED start-of-ride biometric check: the driver unlocks the app with Face ID on their own phone and we
+    receive only pass/fail. Drivers without an enrolled biometric show "not verified" and the passenger decides."""
+    d = next((x for x in drivers.all_drivers() if x["driver_id"] == trip["driver"]["driver_id"]), {})
+    ok = drivers.biometric_enrolled(d)
+    trip["driver_check"] = {"status": "verified" if ok else "not_verified", "method": "face_id",
+                            "at": notify.now_iso(), "simulated": True}
+    log("INFO", "driver_check", trip=trip["trip_id"], status=trip["driver_check"]["status"])
+    if trip.get("wa_chat_id"):
+        d = trip["driver"]
+        notify.send_whatsapp(trip["wa_chat_id"], (
+            f"✅ Your driver {d['name']} unlocked the app with Face ID at the start of the ride."
+            if ok else
+            f"⚠️ Your driver {d['name']} has *not* been verified with Face ID for this ride. You decide: go ahead, "
+            "ask for another ride, or share your trip first.") + " (Simulated in the prototype.)")
+
+
 def start_trip(trip_id):
     trip = get_trip(trip_id)
     if trip["status"] in ("driver_assigned",):
         trip.update(status="in_progress", started_at=notify.now_iso())
+        _driver_check(trip)
         store.put("trips", trip)
     return trip
 
@@ -200,6 +237,7 @@ def telemetry(trip_id, tick):
         raise BadRequest("Trip has ended")
     if trip["status"] == "driver_assigned":
         trip.update(status="in_progress", started_at=notify.now_iso())
+        _driver_check(trip)
     try:
         tick = {"lat": float(tick["lat"]), "lng": float(tick["lng"]), "ts": float(tick["ts"])}
     except (KeyError, TypeError, ValueError):
@@ -210,7 +248,7 @@ def telemetry(trip_id, tick):
         tick["speed_kmh"] = round(metres / (tick["ts"] - float(prev["ts"])) * 3.6)
     trip["last_position"] = {**tick, "at": notify.now_iso()}
 
-    new_events, escalated = [], []
+    new_events, escalated, reminded = [], [], []
     if trip.get("safe_mode"):
         route = places.get_route(trip["pickup"], trip["destination"])
         state, detected = rules.evaluate(trip.get("rules_state"), tick, route["points"])
@@ -220,21 +258,28 @@ def telemetry(trip_id, tick):
             new_events.append(ev)
             log("INFO", "safety_event", trip=trip["trip_id"], type=ev["type"], event_id=ev["event_id"],
                 details=ev["details"])
-        # Escalate open check-ins the passenger hasn't answered in time.
+        # No-answer ladder: a reminder at half the wait window, then escalation at the full window.
+        wait = get_ops_config()["checkin_timeout_s"] if not detected else 0
         for ev in (list_events(trip["trip_id"]) if not detected else []):
-            if ev["status"] == OPEN and ev.get("trip_ts") is not None and tick["ts"] - ev["trip_ts"] >= CHECKIN_TIMEOUT_S:
+            if ev["status"] != OPEN or ev.get("trip_ts") is None:
+                continue
+            waited = tick["ts"] - ev["trip_ts"]
+            if waited >= wait:
                 escalated.append(_escalate(trip, ev, "no_response"))
+            elif waited >= wait / 2 and not ev.get("reminded_at"):
+                reminded.append(_remind(trip, ev, wait - waited))
     store.put("trips", trip)
 
     if trip.get("wa_chat_id"):
         for ev in new_events:
             queue_whatsapp_prompt(trip, ev)
 
-    open_events = [e for e in list_events(trip["trip_id"]) if e["status"] == OPEN] if (new_events or escalated) else []
+    open_events = [e for e in list_events(trip["trip_id"]) if e["status"] == OPEN] if (new_events or escalated or reminded) else []
     return {
         "trip": {"trip_id": trip["trip_id"], "status": trip["status"], "safe_mode": trip.get("safe_mode")},
         "new_events": new_events,
         "escalated": escalated,
+        "reminded": reminded,
         "open_events": open_events,
         "server_ms": round((time.time() - started) * 1000),
     }
@@ -277,6 +322,18 @@ def explain(trip_id, event_id, channel="web"):
     return result
 
 
+def _remind(trip, ev, left_s):
+    ev["reminded_at"] = notify.now_iso()
+    store.put("events", ev)
+    contact = (trip.get("trusted_contact") or {}).get("name") or "your trusted contact"
+    if trip.get("wa_chat_id"):
+        notify.send_whatsapp(trip["wa_chat_id"], f"⏳ {notify.first_name(trip)}, are you OK? If we don't hear back in about "
+                                                 f"{max(1, round(left_s / 60))} min, we'll alert {contact} and our safety team.\n"
+                                                 "Reply *1* = safe, *2* = help, or tell me what's happening.")
+    log("INFO", "checkin_reminder", trip=trip["trip_id"], event_id=ev["event_id"])
+    return ev
+
+
 def _escalate(trip, ev, reason):
     ev["status"] = "escalated"
     ev["escalation_reason"] = reason
@@ -291,11 +348,15 @@ def _escalate(trip, ev, reason):
     return ev
 
 
-def checkin(trip_id, event_id, response, channel="web", prompt_ms=None):
+def checkin(trip_id, event_id, response, channel="web", prompt_ms=None, reply=None):
     if response not in ("ok", "help"):
         raise BadRequest("response must be 'ok' or 'help'")
     trip, ev = get_trip(trip_id), get_event(trip_id, event_id)
     ev["response"] = response
+    if reply:  # the passenger answered in their own words; keep them and how they were understood
+        ev["response_text"] = reply["text"]
+        ev["response_reason"] = reply["reason"]
+        ev["response_understood_by"] = reply["source"]
     ev["response_channel"] = channel
     ev["responded_at"] = notify.now_iso()
     if prompt_ms is not None:
@@ -315,6 +376,23 @@ def checkin(trip_id, event_id, response, channel="web", prompt_ms=None):
         _set_pending(trip["wa_chat_id"], trip["trip_id"], None)
     log("INFO", "checkin", trip=trip_id, event_id=event_id, response=response, channel=channel, prompt_ms=prompt_ms)
     return ev
+
+
+def reply(trip_id, event_id, text, channel="web"):
+    """A check-in answered in free text. The AI classifies it; "unclear" never closes the alert."""
+    text = (text or "").strip()[:300]
+    if not text:
+        raise BadRequest("text is required")
+    trip, ev = get_trip(trip_id), get_event(trip_id, event_id)
+    c = assistant.classify_checkin_reply(text, trip, ev)
+    log("INFO", "checkin_reply", trip=trip_id, event_id=event_id, intent=c["intent"], source=c["source"], channel=channel)
+    if c["intent"] in ("ok", "help") and ev["status"] in (OPEN, "escalated"):
+        ev = checkin(trip_id, event_id, c["intent"], channel=channel,
+                     reply={"text": text, "reason": c["reason"], "source": c["source"]})
+    else:
+        ev.setdefault("unclear_replies", []).append({"text": text, "at": notify.now_iso(), "channel": channel})
+        store.put("events", ev)
+    return {"intent": c["intent"], "reason": c["reason"], "source": c["source"], "event": ev}
 
 
 def sos(trip_id, channel="web", reason="passenger_sos"):
@@ -344,8 +422,10 @@ def link_chat(chat_id, trip_id):
         store.delete("whatsapp", {"pk": f"chat#{old}"})
     trip["wa_chat_id"] = chat_id
     store.put("trips", trip)
+    # Linking while a check-in is already waiting lets the passenger answer it here straight away.
+    waiting = [e["event_id"] for e in list_events(trip["trip_id"]) if e["status"] == OPEN]
     store.put("whatsapp", {"pk": f"chat#{chat_id}", "trip_id": trip["trip_id"], "linked_at": notify.now_iso(),
-                           "pending_event_id": None, "ttl": store.ttl_days(2)})
+                           "pending_event_id": waiting[-1] if waiting else None, "ttl": store.ttl_days(2)})
     log("INFO", "whatsapp_linked", trip=trip["trip_id"], chat=notify.mask(chat_id))
     return trip
 

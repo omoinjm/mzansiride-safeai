@@ -79,9 +79,11 @@ export class FleetDemo {
         c.answerAt = c.ticks + 3
       }
       if (c.openEvent && c.ticks === c.answerAt) {
-        await api.checkin(c.tripId, c.openEvent, 'ok')
+        // Answers in their own words; the AI decides whether that means OK. Unclear (e.g. no AI locally): taps OK.
+        const r = await api.reply(c.tripId, c.openEvent, 'Driver took a detour around traffic, still heading to Park Station')
+        if (r.intent !== 'ok') await api.checkin(c.tripId, c.openEvent, 'ok')
         c.sim.resume()
-        onLog(`${c.tripId}: passenger answered "I'm OK"`)
+        onLog(r.intent === 'ok' ? `${c.tripId}: AI read the reply as OK (${r.reason})` : `${c.tripId}: passenger answered "I'm OK"`)
       }
     }
     if (s.mode === 'arrived') {

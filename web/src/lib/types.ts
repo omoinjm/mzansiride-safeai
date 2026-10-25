@@ -62,12 +62,24 @@ export type SafetyEvent = {
   escalation_reason?: string
   notifications: Notification[]
   prompt_ms?: number
+  response_text?: string
+  response_reason?: string
+  response_understood_by?: string
+  unclear_replies?: { text: string; at: string; channel: string }[]
+  reminded_at?: string
+  escalated_at?: string
   ai?: Record<string, AiResult>
   triage?: AiResult
   operator_ack?: OperatorAck
 }
 
 export type OperatorAck = { at: string; action: string }
+
+export type DriverCheck = { status: 'verified' | 'not_verified'; method: string; at: string; simulated: boolean }
+
+export type CheckinReply = { intent: 'ok' | 'help' | 'unclear'; reason: string; source: string; event: SafetyEvent }
+
+export type PhotoCheck = { plate: string | null; lookup: DriverLookup | null; source: string; advice?: string; stored: boolean }
 
 export type Risk = 'red' | 'amber' | 'handled' | 'green'
 
@@ -111,6 +123,7 @@ export type Trip = {
   whatsapp_channel?: WhatsAppChannel
   passenger_phone?: string
   last_position?: { lat: number; lng: number; ts: number; speed_kmh?: number }
+  driver_check?: DriverCheck
   route?: Route
   events?: SafetyEvent[]
 }
@@ -119,6 +132,7 @@ export type TelemetryResult = {
   trip: { trip_id: string; status: string; safe_mode: boolean }
   new_events: SafetyEvent[]
   escalated: SafetyEvent[]
+  reminded: SafetyEvent[]
   open_events: SafetyEvent[]
   server_ms: number
 }

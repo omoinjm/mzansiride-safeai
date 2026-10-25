@@ -143,8 +143,8 @@ def test_whatsapp_link_prompt_and_reply(aws):
     assert "Linked to trip" in wa(f"trip {tid.lower()}")
     stop_for(tid, 200)
     status, out = call("GET", "/api/whatsapp/outbox", qs={"session": "test1"})
-    assert len(out["messages"]) == 1 and "Reply *1*" in out["messages"][0]["text"]
-    assert "AI says (whatsapp)" in out["messages"][0]["text"]
+    assert len(out["messages"]) == 2 and "Face ID" in out["messages"][0]["text"]
+    assert "Reply *1*" in out["messages"][1]["text"] and "AI says (whatsapp)" in out["messages"][1]["text"]
     assert "trusted contact" in wa("help").lower()  # "help" during an open check-in escalates
     assert "no open check-in" in wa("1")
 

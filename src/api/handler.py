@@ -45,7 +45,7 @@ def config(event, body):
         },
         "model": assistant.MODEL_ID,
         "guardrail": bool(os.environ.get("GUARDRAIL_ID")),
-        "checkin_timeout_s": trips.CHECKIN_TIMEOUT_S,
+        "checkin_timeout_s": trips.get_ops_config()["checkin_timeout_s"],
         "region": os.environ.get("AWS_REGION"),
     }
 
@@ -88,6 +88,31 @@ def dashboard(event, body):
     return trips.dashboard()
 
 
+MAX_PHOTO_BYTES = 3 * 1024 * 1024
+
+
+def photo_check(event, body):
+    try:
+        image = base64.b64decode(body.get("image") or "", validate=True)
+    except ValueError:
+        raise trips.BadRequest("image must be base64")
+    if not image or len(image) > MAX_PHOTO_BYTES:
+        raise trips.BadRequest("Send a photo smaller than 3 MB")
+    try:
+        result = drivers.photo_check(image, body.get("mime"))
+    except ValueError as e:
+        raise trips.BadRequest(str(e))
+    log("INFO", "plate_photo", read=bool(result["plate"]), verdict=(result["lookup"] or {}).get("verdict"),
+        channel="web")
+    return result
+
+
+def ops_config(event, body):
+    _require_team_code(event)
+    method = event["requestContext"]["http"]["method"]
+    return trips.set_ops_config(body) if method == "PUT" else trips.get_ops_config()
+
+
 def acknowledge(event, body, trip, ev):
     _require_team_code(event)
     return trips.acknowledge(trip.upper(), ev, body.get("action"))
@@ -116,6 +141,11 @@ ROUTES = [
     ("POST", r"/api/trips/(?P<trip>[A-Za-z0-9]+)/events/(?P<ev>[A-Za-z0-9_-]+)/explain",
      lambda e, b, trip, ev: trips.explain(trip.upper(), ev, channel="web")),
     ("POST", r"/api/trips/(?P<trip>[A-Za-z0-9]+)/events/(?P<ev>[A-Za-z0-9_-]+)/ack", acknowledge),
+    ("POST", r"/api/trips/(?P<trip>[A-Za-z0-9]+)/events/(?P<ev>[A-Za-z0-9_-]+)/reply",
+     lambda e, b, trip, ev: trips.reply(trip.upper(), ev, b.get("text"), channel="web")),
+    ("GET", r"/api/ops/config", ops_config),
+    ("PUT", r"/api/ops/config", ops_config),
+    ("POST", r"/api/drivers/photo-check", photo_check),
     ("GET", r"/api/drivers/lookup", lambda e, b: drivers.lookup((e.get("queryStringParameters") or {}).get("q", ""))),
     ("POST", r"/api/assistant", assistant_chat),
     ("POST", r"/api/whatsapp/simulate", wa_simulate),

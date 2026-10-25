@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { Activity, Bell, Car, CirclePlay, CircleStop, Lock, MessageCircle, Phone, RefreshCw, ShieldAlert, ShieldCheck, Siren, Sparkles, Timer } from 'lucide-react'
 import { api, save, store } from '../lib/api'
 import { FleetDemo } from '../lib/fleet'
-import type { Dashboard, FleetRow, Risk } from '../lib/types'
+import type { Dashboard, FleetRow, Risk, SafetyEvent } from '../lib/types'
 import FleetMap from '../components/FleetMap'
 import { Pill, Section, SimBadge, Spinner } from '../components/ui'
 import { EVENT_LABEL, RISK_COLOUR, timeAgo } from '../lib/format'
@@ -19,6 +19,15 @@ export default function DashboardPage() {
   const demo = useRef(new FleetDemo())
   const [demoRunning, setDemoRunning] = useState(false)
   const [demoLog, setDemoLog] = useState<string[]>([])
+  const [waitS, setWaitS] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (code) api.opsConfig(code).then((c) => setWaitS(c.checkin_timeout_s)).catch(() => {})
+  }, [code])
+
+  async function changeWait(s: number) {
+    setWaitS((await api.opsConfig(code, s)).checkin_timeout_s)
+  }
 
   const load = useCallback(async () => {
     if (!code) return
@@ -122,6 +131,23 @@ export default function DashboardPage() {
       <p className="-mt-3 text-sm text-slate-600">
         For the e-hailing operator's safety team: every live trip is monitored from its telemetry. Trips that need action are flagged red with an AI triage suggestion.
       </p>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
+        <Timer size={16} className="text-brand-600" />
+        <label htmlFor="wait-window" className="font-semibold">
+          Check-in wait window
+        </label>
+        <select id="wait-window" className="input w-auto py-1" value={waitS ?? ''} onChange={(e) => changeWait(Number(e.target.value))} disabled={waitS === null}>
+          {[60, 120, 180, 300].map((s) => (
+            <option key={s} value={s}>
+              {s / 60} min
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-slate-500">
+          No answer: a reminder at half the window, then the trusted contact and this dashboard are alerted. Trip time; the simulator runs faster.
+        </span>
+      </div>
 
       <Fleet fleet={data.fleet} onAck={ack} log={demoLog} />
 
@@ -329,6 +355,12 @@ function FleetCard({ f, onAck }: { f: FleetRow; onAck: (f: FleetRow, action: str
           </span>
         )}
       </div>
+      {ev && (ev.type === 'PROLONGED_STOP' || ev.type === 'ROUTE_DEVIATION') && <Ladder ev={ev} acked={!!f.triage?.operator_ack} />}
+      {ev?.response_text && (
+        <p className="mt-1 text-xs text-slate-700">
+          Passenger: “{ev.response_text}” <span className="text-slate-500">({ev.response === 'ok' ? 'understood as OK' : 'needs help'})</span>
+        </p>
+      )}
       {f.triage && (
         <div className="mt-2 rounded-lg bg-white p-2 text-sm shadow-sm">
           <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -355,5 +387,26 @@ function FleetCard({ f, onAck }: { f: FleetRow; onAck: (f: FleetRow, action: str
         </div>
       )}
     </div>
+  )
+}
+
+/** The no-answer ladder for one alert: check-in sent, reminder, contact told, operator alerted, acknowledged. */
+function Ladder({ ev, acked }: { ev: SafetyEvent; acked: boolean }) {
+  const steps: [string, boolean][] = [
+    ['Check-in sent', true],
+    ['Reminder', !!ev.reminded_at],
+    ['Contact told', ev.status === 'escalated'],
+    ['Operator alerted', !!ev.escalated_at || ev.status === 'escalated'],
+    ['Acknowledged', acked],
+  ]
+  if (ev.status === 'resolved_ok') return <p className="mt-1 text-xs text-emerald-700">Check-in answered: passenger OK</p>
+  return (
+    <ol className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
+      {steps.map(([label, done], i) => (
+        <li key={label} className={`rounded-full px-2 py-0.5 ${done ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
+          {i + 1}. {label}
+        </li>
+      ))}
+    </ol>
   )
 }

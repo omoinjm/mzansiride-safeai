@@ -12,7 +12,7 @@ const COMMANDS = [
   ['HELP', 'Menu'],
   ['CHECK CA 123-456', 'Look up a driver or number plate in the registry'],
   ['TRIP MZXXXX', 'Link this chat to your trip for check-ins'],
-  ['1 / 2', "Answer a check-in: I'm OK / I need help"],
+  ['1 / 2 or your own words', "Answer a check-in: I'm OK / I need help, or e.g. \"took a detour, still going to Sandton\""],
   ['SOS', 'Alert your trusted contact now'],
   ['Any question', 'Answered by the AI safety assistant'],
 ]
