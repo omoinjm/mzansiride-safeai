@@ -5,7 +5,7 @@
 #   ./scripts/openwa.sh qr       fetch the pairing QR -> build/whatsapp-qr.png (scan: WhatsApp > Linked devices)
 #   ./scripts/openwa.sh status   session status
 #   ./scripts/openwa.sh logs     last OpenWA container logs
-#   ./scripts/openwa.sh restart  restart OpenWA if sends hang (the WhatsApp login is kept, no new QR)
+#   ./scripts/openwa.sh restart  recreate OpenWA if sends hang (fresh browser; the WhatsApp login is kept, no new QR)
 #   ./scripts/openwa.sh dashboard  SSM port-forward: OpenWA dashboard on http://localhost:2785 (never public)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -35,6 +35,18 @@ remote() {
 # Prelude for every remote call: API key from SSM, curl helper against the local-only admin API.
 PRELUDE="set -e; K=\$(aws ssm get-parameter --region $REGION --name '${PREFIX}api_key' --with-decryption --query Parameter.Value --output text); \
 api() { curl -sS -H \"X-API-Key: \$K\" -H 'Content-Type: application/json' \"\$@\"; }; B=http://127.0.0.1:2785/api"
+
+RECREATE='set -e
+IMG=$(docker inspect -f "{{.Config.Image}}" openwa 2>/dev/null || true)
+IMG=${IMG:-rmyndharis/openwa:0.25.0}
+docker image inspect "$IMG" >/dev/null
+docker rm -f openwa >/dev/null 2>&1 || true
+docker run -d --name openwa --restart unless-stopped --network wa -p 127.0.0.1:2785:2785 --shm-size=1g \
+  -v /opt/openwa/data:/app/data -e NODE_ENV=production -e DATABASE_TYPE=sqlite -e DATABASE_SYNCHRONIZE=true \
+  -e ENGINE_TYPE=whatsapp-web.js -e AUTO_START_SESSIONS=true -e RESOLVE_LID_TO_PHONE=true \
+  -e TRUSTED_PROXIES=172.16.0.0/12 "$IMG" >/dev/null
+for i in $(seq 1 60); do sleep 3; docker logs openwa 2>&1 | grep -q "Session ready" && { echo "Session ready after $((i*3)) s"; exit 0; }; done
+echo "Not ready after 3 min: check make wa-status"'
 
 session_id() {
   aws ssm get-parameter --region "$REGION" --name "${PREFIX}session_id" --query Parameter.Value --output text 2>/dev/null || true
@@ -76,7 +88,10 @@ PY
     remote "$PRELUDE; api \$B/sessions/$SID; echo; curl -s -o /dev/null -w 'public TLS endpoint: %{http_code}\n' https://\$(curl -s ifconfig.me | tr . -).sslip.io/api/health"
     ;;
   restart)
-    remote "docker restart openwa >/dev/null; for i in \$(seq 1 60); do sleep 3; docker logs --since 3m openwa 2>&1 | grep -q 'Session ready' && { echo \"Session ready after \$((i*3)) s\"; exit 0; }; done; echo 'Not ready after 3 min: check make wa-status'"
+    # Recreate (not just restart) the container: a restart keeps Chromium's cached WhatsApp Web page, which
+    # is what breaks when WhatsApp ships a build OpenWA can't drive. The login lives on the /app/data volume.
+    # Same settings as openwa/user_data.sh.tftpl. The image is checked before anything is removed.
+    remote "$RECREATE"
     ;;
   dashboard)
     command -v session-manager-plugin >/dev/null || { echo "Install the AWS session-manager-plugin first" >&2; exit 1; }

@@ -109,7 +109,7 @@ Before the demo, on the **Ride** page put **your own or your teammate's number**
 - The AI is slow: keep talking. The modal shows the alert immediately, and the explanation follows a few seconds later.
 - The AI shows "standard guidance shown": "That's our fallback. The safety flow never depends on the AI being up."
 - Plate photo isn't read: say "the photo check needs a clear shot", then use *Check plate in registry*. On WhatsApp the bot says photos are coming; type `CHECK <plate>`.
-- WhatsApp replies stop arriving: run `make wa-restart` (about 30 s, keeps the login), then try again.
+- WhatsApp replies stop arriving: run `make wa-restart` (about a minute; recreates the gateway with a fresh browser and keeps the login), then try again.
 - WhatsApp is down or the account is restricted: use the **WhatsApp simulator** page, which runs the same backend code.
 - The Wi-Fi drops: run `make local` on the laptop, or use the screenshots in `docs/screenshots/`.
 
