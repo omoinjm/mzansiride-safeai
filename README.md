@@ -242,7 +242,8 @@ src/api/        web API Lambda          src/whatsapp/  OpenWA webhook + sender L
 web/            React app (pages/, components/, lib/sim.ts = journey simulator), e2e/ Playwright
 infra/          Terraform               openwa/        EC2 boot script (OpenWA + Caddy)
 scripts/        local_server.py (offline mode), openwa.sh (admin via SSM), bootstrap_ci.sh
-docs/           architecture, presentation-notes.md, aws-services-qa.md, screenshots/
+docs/           architecture, presentation-notes.md, aws-services-qa.md, screenshots/,
+                presentation/ (the deck + two-presenter script)
 ```
 
 ## Privacy, security, responsible AI
