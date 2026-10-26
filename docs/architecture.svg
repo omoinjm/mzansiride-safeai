@@ -39,7 +39,7 @@
 
   <rect x="24" y="520" width="200" height="64" class="box" stroke="#059669"/>
   <text x="40" y="546" class="t">Trusted contact</text>
-  <text x="40" y="566" class="s">alert on WhatsApp (allow-listed)</text>
+  <text x="40" y="566" class="s">WhatsApp alert · SMS on SOS</text>
 
   <rect x="24" y="604" width="200" height="80" class="box" stroke="#dc2626"/>
   <text x="40" y="630" class="t">Fleet operator</text>
@@ -102,15 +102,19 @@
   <rect x="1050" y="410" width="170" height="90" class="box" stroke="#E7157B"/>
   <text x="1066" y="438" class="t">CloudWatch</text>
   <text x="1066" y="458" class="s">JSON logs · dashboard</text>
-  <text x="1066" y="476" class="s">alarms · Bedrock tokens</text>
+  <text x="1066" y="476" class="s">alarms · 5-min health check</text>
+
+  <rect x="860" y="530" width="170" height="70" class="box" stroke="#DD344C"/>
+  <text x="876" y="558" class="t">Amazon Cognito</text>
+  <text x="876" y="578" class="s">operator sign-in · JWT</text>
+  <rect x="1050" y="530" width="170" height="70" class="box" stroke="#E7157B"/>
+  <text x="1066" y="558" class="t">Amazon SNS</text>
+  <text x="1066" y="578" class="s">SMS on SOS · alert emails</text>
 
   <!-- planned -->
-  <rect x="860" y="530" width="170" height="70" class="box dash" stroke="#94a3b8"/>
-  <text x="876" y="558" class="t" fill="#64748b">Cognito</text>
-  <text x="876" y="578" class="s">planned: user sign-in</text>
-  <rect x="1050" y="530" width="170" height="70" class="box dash" stroke="#94a3b8"/>
-  <text x="1066" y="558" class="t" fill="#64748b">Location Service</text>
-  <text x="1066" y="578" class="s">planned: live GPS/routes</text>
+  <rect x="860" y="616" width="360" height="62" class="box dash" stroke="#94a3b8"/>
+  <text x="876" y="642" class="t" fill="#64748b">Amazon Location Service</text>
+  <text x="876" y="662" class="s">planned: live GPS and road routes</text>
 
   <rect x="24" y="250" width="200" height="74" class="box dash" stroke="#f59e0b"/>
   <text x="40" y="276" class="t">Journey simulator</text>
