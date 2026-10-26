@@ -12,7 +12,7 @@ const FEATURES: [string, Status, string][] = [
   ['AI triage for the operator', 'done', 'When an alert escalates, Bedrock writes a one-sentence next action for the fleet manager (rules-based text if the AI is down)'],
   ['Proactive WhatsApp check-ins', 'done', 'Passenger number at booking, no TRIP code needed. Real WhatsApp messages (rate-limited); the simulator when WhatsApp is not connected'],
   ['Demo fleet + simulator panel', 'simulated', 'Normal drive / off-route / prolonged stop buttons, and a 5-car demo fleet with one scripted incident'],
-  ['Trusted-contact notification', 'done', 'Real WhatsApp alert with car, plate and location (rate-limited per number), plus one SMS (Amazon SNS) on SOS or "I need help"'],
+  ['Trusted-contact notification', 'done', 'Real WhatsApp alert with car, plate and location (rate-limited per number), plus one SMS (Amazon SNS) on SOS or "I need help": built, simulated until the account is enabled for SMS'],
   ['Operator sign-in (Amazon Cognito)', 'done', 'Invite-only operator accounts for the Fleet page; API Gateway checks the token before any code runs'],
   ['System health + alert emails', 'done', 'Fleet health panel; a 5-minute health check emails the team (Amazon SNS) when something is down and when it recovers'],
   ['Individual vs shared fare comparison', 'done', 'Illustrative pricing rules, no payments'],

@@ -34,7 +34,7 @@ flowchart LR
         P["Passenger (web app)<br/>book · Safe Journey · check-in"]
         OP["Fleet operator<br/>live fleet · AI triage · acknowledge"]
         PW["Passenger (WhatsApp)<br/>CHECK · TRIP · SOS · 1/2 · AI chat"]
-        TC["Trusted contact<br/>WhatsApp alert"]
+        TC["Trusted contact<br/>WhatsApp alert · SMS on SOS"]
         SIM["Journey simulator in the browser<br/>replays real OSM roads · SIMULATED"]
     end
 
@@ -43,6 +43,7 @@ flowchart LR
         CF["Amazon CloudFront<br/>HTTPS · SA edge locations"]
         S3["Amazon S3<br/>private SPA bucket (OAC)"]
         EC2["Amazon EC2 · OpenWA<br/>WhatsApp gateway · Caddy TLS"]
+        COG["Amazon Cognito<br/>operator sign-in"]
     end
 
     subgraph compute["API and compute"]
@@ -58,8 +59,7 @@ flowchart LR
         DDB[("DynamoDB<br/>trips · events · drivers · whatsapp")]
         SSM["SSM Parameter Store<br/>gateway key · webhook secret"]
         CW["CloudWatch<br/>logs · dashboard · alarms<br/>EventBridge 5-min health check"]
-        SNS["Amazon SNS<br/>SMS to contact · alert emails"]
-        COG["Amazon Cognito<br/>operator sign-in"]
+        SNS["Amazon SNS<br/>alert emails · SMS to contact<br/>(SMS simulated until enabled)"]
     end
 
     subgraph planned["Planned"]
@@ -146,7 +146,7 @@ Solid = implemented · dashed orange = simulated in the prototype · dashed grey
 | Regular-trip budget | ✅ Completed | Fare comparison per week / month / year, alone vs shared |
 | Ask AI button + installable web app | ✅ Completed | Floating assistant button on every page; PWA manifest + icons (Add to Home Screen) |
 | Trusted-contact notification | ✅ Completed | Real WhatsApp alert via OpenWA to any valid number (20/number/hour, 500/day) |
-| SMS to the trusted contact | ✅ Completed | Amazon SNS, one SMS on SOS or "I need help" only. Sandbox accounts: verify numbers first (`make sms-verify NUMBER=`) |
+| SMS to the trusted contact | 🧪 Simulated | Built on Amazon SNS (one SMS on SOS or "I need help" only), but this account isn't enabled for SMS yet, so `enable_sms = false` in `infra/target.auto.tfvars` and the app shows "simulated". Once AWS enables SMS: set it to true and verify numbers (`make sms-verify NUMBER=`) |
 | WhatsApp on/off switch | ✅ Completed | Fleet page. Off: no WhatsApp sends, the simulator is disabled, people who message the bot get one "paused" reply an hour |
 | Alert emails when something is down | ✅ Completed | EventBridge health check every 5 min → CloudWatch metrics → alarms → SNS email (alarm and recovery) |
 | Operator sign-in | ✅ Completed | Amazon Cognito (invite-only `operators` group), API Gateway JWT authorizer on the Fleet routes. Replaces the shared team code |
