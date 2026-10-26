@@ -11,7 +11,7 @@
 #   2. pick Bedrock models this account can actually call (Claude Haiku 5.5 preferred, Nova Lite fallback)
 #   3. state bucket in the new account (writes infra/backend.hcl) + infra/target.auto.tfvars (region, models)
 #   4. terraform init -reconfigure + make deploy (tests, plan, apply, site upload)
-#   5. smoke test, set the check-in wait window to 5 min (demo-friendly)
+#   5. smoke test (API, operator routes locked behind Cognito, Bedrock)
 #   6. WhatsApp: wait for the new gateway, register the session + webhook, fetch the QR code
 #   7. optional --old-profile: stop the OLD gateway instance, so two gateways don't both answer every message
 #   8. optional --ci: point GitHub Actions deploys at the new account
@@ -104,7 +104,7 @@ step "4/8 Deploy (tests, terraform plan + apply, site upload): about 10 minutes 
 [ -d .venv ] && [ -d web/node_modules ] || make setup
 make init
 make deploy
-URL="$(make -s url)"; CODE="$(make -s code)"
+URL="$(make -s url)"
 
 # ---------- 5. smoke test + demo settings ----------
 step "5/8 Smoke test"
@@ -112,14 +112,17 @@ for i in $(seq 1 30); do
   python3 -c "import urllib.request,sys; urllib.request.urlopen(sys.argv[1]+'/api/health', timeout=10)" "$URL" 2>/dev/null && break
   sleep 10   # CloudFront can take a few minutes to start serving a new distribution
 done
-python3 - "$URL" "$CODE" <<'PY'
-import json, sys, urllib.request
-url, code = sys.argv[1], sys.argv[2]
+python3 - "$URL" <<'PY'
+import json, sys, urllib.error, urllib.request
+url = sys.argv[1]
 health = json.load(urllib.request.urlopen(url + "/api/health", timeout=15))
 assert health.get("ok"), health
-req = urllib.request.Request(url + "/api/ops/config", data=json.dumps({"checkin_timeout_s": 300}).encode(), method="PUT",
-                             headers={"content-type": "application/json", "x-team-code": code})
-print("API ok; check-in wait window:", json.load(urllib.request.urlopen(req, timeout=15))["checkin_timeout_s"], "s")
+try:
+    urllib.request.urlopen(url + "/api/dashboard", timeout=15)
+    sys.exit("The Fleet API answered without a sign-in: check the Cognito JWT authorizer")
+except urllib.error.HTTPError as e:
+    assert e.code == 401, e.code
+print("API ok; operator routes need a Cognito sign-in")
 reply = json.load(urllib.request.urlopen(urllib.request.Request(url + "/api/assistant", data=json.dumps({"message": "Is it normal for the driver to stop for fuel?"}).encode(), headers={"content-type": "application/json"}), timeout=60))
 print("Assistant answered via:", reply.get("model") or "rules-based fallback")
 PY
@@ -173,7 +176,8 @@ fi
 step "Done"
 cat <<EOF
 App:        $URL
-Fleet code: $CODE   (Fleet page; keep it off slides)
+Fleet page: sign in with an admin_emails address. Cognito emails each one a temporary password
+            (first sign-in asks for a new one). Set the check-in wait window there (5 min suits a demo).
 Region:     $REGION   Models: $PRIMARY / $FALLBACK
 Next:       scan the WhatsApp QR, then  make wa-send TO=<your number>  and book a test trip.
 Switch back: AWS_PROFILE=<old profile> ./scripts/switch_account.sh --region ${CURRENT_REGION:-eu-west-1}

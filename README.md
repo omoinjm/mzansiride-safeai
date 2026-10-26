@@ -57,12 +57,13 @@ flowchart LR
         BR["Amazon Bedrock<br/>Claude Haiku 5.5 · Nova Lite fallback<br/>Guardrails"]
         DDB[("DynamoDB<br/>trips · events · drivers · whatsapp")]
         SSM["SSM Parameter Store<br/>gateway key · webhook secret"]
-        CW["CloudWatch<br/>logs · dashboard · alarms"]
+        CW["CloudWatch<br/>logs · dashboard · alarms<br/>EventBridge 5-min health check"]
+        SNS["Amazon SNS<br/>SMS to contact · alert emails"]
+        COG["Amazon Cognito<br/>operator sign-in"]
     end
 
     subgraph planned["Planned"]
         direction TB
-        COG["Amazon Cognito · sign-in"]
         LOC["Amazon Location Service · live GPS"]
     end
 
@@ -84,15 +85,19 @@ flowchart LR
     LWA --> DDB
     LWA --> SSM
     compute -.->|logs| CW
-    COG -.- APIGW
+    OP -->|sign in| COG
+    COG -.->|"ID token checked by<br/>JWT authorizer"| APIGW
+    LAPI -->|"SOS / I need help: SMS"| SNS
+    SNS -->|SMS| TC
+    CW -->|"alarm → email the team"| SNS
     LOC -.- LAPI
 
     classDef aws fill:#ecfdf6,stroke:#078a66,color:#063f31
     classDef sim fill:#fff7ed,stroke:#f59e0b,stroke-dasharray: 5 4,color:#7c2d12
     classDef plan fill:#f1f5f9,stroke:#94a3b8,stroke-dasharray: 5 4,color:#475569
-    class CF,S3,EC2,APIGW,LAPI,LWA,BR,DDB,SSM,CW aws
+    class CF,S3,EC2,APIGW,LAPI,LWA,BR,DDB,SSM,CW,SNS,COG aws
     class SIM sim
-    class COG,LOC plan
+    class LOC plan
 ```
 
 Solid = implemented · dashed orange = simulated in the prototype · dashed grey = planned. The numbers follow the same flow as the image above.
@@ -130,7 +135,7 @@ Solid = implemented · dashed orange = simulated in the prototype · dashed grey
 | Two safety-event rules | ✅ Completed | Backend rules; positions are simulated (no live GPS) |
 | Passenger check-in prompt | ✅ Completed | Plus auto-escalation and a measured time to prompt |
 | Bedrock safety assistant | ✅ Completed | Grounded prompt, Guardrail, fallback, per-event cache |
-| Alert dashboard → **Fleet safety dashboard** | ✅ Completed | Live fleet map + list (green/amber/red), speed, AI triage, operator acknowledge, demo fleet. Team-code protected |
+| Alert dashboard → **Fleet safety dashboard** | ✅ Completed | Live fleet map + list (green/amber/red), speed, AI triage, operator acknowledge, demo fleet, system health panel |
 | AI triage for the operator (repositioning) | ✅ Completed | Bedrock one-sentence next action on every escalation; rules-based fallback |
 | Proactive WhatsApp check-ins (repositioning) | ✅ Completed | Passenger number at booking, personalised prompt, no TRIP code needed |
 | Check-in replies in your own words | ✅ Completed | Bedrock classifies OK / help / unclear; danger words escalate without AI; unclear asks again, never closes |
@@ -141,11 +146,15 @@ Solid = implemented · dashed orange = simulated in the prototype · dashed grey
 | Regular-trip budget | ✅ Completed | Fare comparison per week / month / year, alone vs shared |
 | Ask AI button + installable web app | ✅ Completed | Floating assistant button on every page; PWA manifest + icons (Add to Home Screen) |
 | Trusted-contact notification | ✅ Completed | Real WhatsApp alert via OpenWA to any valid number (20/number/hour, 500/day) |
+| SMS to the trusted contact | ✅ Completed | Amazon SNS, one SMS on SOS or "I need help" only. Sandbox accounts: verify numbers first (`make sms-verify NUMBER=`) |
+| WhatsApp on/off switch | ✅ Completed | Fleet page. Off: no WhatsApp sends, the simulator is disabled, people who message the bot get one "paused" reply an hour |
+| Alert emails when something is down | ✅ Completed | EventBridge health check every 5 min → CloudWatch metrics → alarms → SNS email (alarm and recovery) |
+| Operator sign-in | ✅ Completed | Amazon Cognito (invite-only `operators` group), API Gateway JWT authorizer on the Fleet routes. Replaces the shared team code |
 | Individual vs shared fare comparison | ✅ Completed | Illustrative pricing rules |
 | AWS-backed workflow | ✅ Completed | Terraform, CI/CD, monitoring |
 | **WhatsApp channel** (team addition) | ✅ Completed | Driver check, trip link, check-ins, SOS, AI chat + web simulator |
 | Live GPS, map-matched deviation | ⏳ Outstanding | Amazon Location Service + device location |
-| User accounts | ⏳ Outstanding | Amazon Cognito (replaces the shared team code) |
+| Passenger accounts | ⏳ Outstanding | Passengers book without an account today; a Cognito `passengers` group would add trip history |
 | Emergency services, real driver verification, payments, matching | ⏳ Outstanding | Need partners, compliance and operational processes |
 
 ## Run it
@@ -154,13 +163,13 @@ Prereqs: Terraform ≥ 1.10, Python 3.12+ with `uv`, Node 22+, AWS CLI v2 logged
 
 ```bash
 make setup        # .venv + web deps
-make test         # 48 backend tests + typecheck + lint
+make test         # 80 backend tests + typecheck + lint
 make local        # full app on http://localhost:8077, in-memory DB, offline AI fallback (= backup demo)
 make local-ai     # same with real Bedrock
 make init         # terraform init (state bucket: ./scripts/bootstrap_state.sh, once per account)
 make deploy       # tests → terraform plan → apply that plan → upload SPA → invalidate
-make url; make code
-make e2e          # Playwright journey (E2E_URL=$(make url) TEAM_CODE=$(make code) make e2e for the live site)
+make url
+make e2e          # Playwright journey (live: E2E_URL=$(make url) E2E_USER=<operator email> E2E_PASS=... make e2e)
 ```
 
 Optional `infra/terraform.tfvars` (git-ignored):

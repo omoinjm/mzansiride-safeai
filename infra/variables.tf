@@ -53,13 +53,6 @@ variable "wa_number" {
   sensitive   = true
 }
 
-variable "team_code" {
-  description = "Code for the operator dashboard. Leave empty to generate one (terraform output -raw team_code)."
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
 variable "budget_email" {
   description = "Email for the monthly AWS budget alert. Leave empty to skip creating the budget."
   type        = string

@@ -8,7 +8,7 @@
 make setup / make test            # pytest (tests/, moto-mocked DynamoDB) + tsc + eslint
 .venv/bin/python -m pytest tests/test_rules.py -q
 make local                        # app on :8077, in-memory DB, offline AI fallback (also the backup demo)
-make e2e                          # Playwright (web/e2e), default against :8077; E2E_URL/TEAM_CODE for live
+make e2e                          # Playwright (web/e2e), default against :8077; E2E_URL + E2E_USER/E2E_PASS (Cognito operator) for live
 make deploy                       # plan -out + apply that plan + `make site` (S3 sync + invalidation)
 make wa-setup / wa-qr / wa-status # OpenWA admin via SSM (scripts/openwa.sh)
 ```
@@ -26,10 +26,12 @@ Deploying = pushing to `main` (`.github/workflows/deploy.yml`, OIDC role `github
 - **Health panel:** `core/health.py` keeps best-effort counters (`health#<day>`) and last-seen times (`health#state`) in the whatsapp table, recorded in `assistant._converse`, `notify.notify_trusted_contact` and the whatsapp handler. `GET /api/ops/health` (team code) adds a gateway ping (`OPENWA_HEALTH_URL`) and Lambda error metrics. Never put raw logs or phone numbers in it.
 - **Notifications:** `core/notify.py`. Real WhatsApp sends only via an async invoke of the whatsapp Lambda, to any valid number; unsolicited sends (contact alerts, first message to a passenger) go through `take_send_quota` (per number per hour, per day). Without the gateway everything is recorded as `simulated`.
 - **OpenWA** (`infra/openwa.tf`, `openwa/user_data.sh.tftpl`): Caddy exposes only `send-text` and `health`. Secrets are in SSM `/mzansiride/openwa/*` (`api_key` is written by the instance on first boot, `session_id` by `scripts/openwa.sh setup`). Webhook HMAC is `X-OpenWA-Signature: sha256=<hex>`. The instance ignores AMI changes so the WhatsApp login isn't lost.
+- **Operator sign-in:** Cognito pool `mzansiride-operators` (`infra/cognito.tf`, invite-only, users from `admin_emails`, group `operators`). An API Gateway JWT authorizer on `GET /api/dashboard`, `ANY /api/ops/{proxy+}` and the ack route reads the ID token from **`x-operator-token`** (CloudFront strips `Authorization` on GETs). `web/src/lib/auth.ts` calls Cognito's JSON API directly (no SDK); `/api/config` returns the pool and client ids. `api.handler._require_operator` checks the `operators` group; the `TEAM_CODE` header works only where the env is set (local mode, tests).
+- **WhatsApp switch, SMS, alerts:** `config#ops.whatsapp_enabled` (Fleet page) gates every WhatsApp send via `notify.whatsapp_enabled()` (20 s cache); paused inbound gets one reply per chat per hour. `notify.send_sms` (SNS) runs only for `passenger_sos`/`passenger_help`. EventBridge invokes the api Lambda with `{"action":"health_check"}` every 5 min; `health.check_and_publish` writes `MzansiRide/Health` metrics, alarms email the `mzansiride-ops-alerts` topic. No `aws_sns_sms_preferences`: this account can't read them.
 - **Frontend:** Vite + React 19 + Tailwind v4 (component classes are `@utility` in `index.css`). It talks to `/api` same-origin through CloudFront, and a CloudFront Function does the SPA rewrite. `routes.json` (OSM routes between 6 Joburg places) is the single source for maps and fares.
 - **Terraform state** is in `mzansiride-tfstate-<account>-eu-west-1` (`scripts/bootstrap_state.sh` writes `infra/backend.hcl`). Same AWS account as RekogNail, whose stack has been torn down.
 
 ## Gotchas
 - Lambda concurrency in this account is 10: don't add reserved concurrency.
 - Keep "simulated" labels on anything that isn't real (judging requirement).
-- Don't put the team code or phone numbers in docs or commits.
+- Don't put the team code, phone numbers or operator emails in docs or commits (`admin_emails` lives in git-ignored `infra/terraform.tfvars` and the `ADMIN_EMAILS` GitHub secret).

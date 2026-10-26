@@ -49,7 +49,10 @@ resource "aws_lambda_function" "api" {
   timeout          = 30
 
   environment {
-    variables = merge(local.common_env, { TEAM_CODE = local.team_code })
+    variables = merge(local.common_env, {
+      COGNITO_USER_POOL_ID = aws_cognito_user_pool.operators.id
+      COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.fleet.id
+    })
   }
 
   depends_on = [aws_cloudwatch_log_group.api, aws_iam_role_policy.api]

@@ -151,7 +151,10 @@ export type AppConfig = {
   guardrail: boolean
   checkin_timeout_s: number
   region: string
+  cognito?: CognitoConfig | null
 }
+
+export type CognitoConfig = { region: string; user_pool_id: string; client_id: string }
 
 export type OpsConfig = { checkin_timeout_s: number; whatsapp_enabled: boolean }
 

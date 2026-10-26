@@ -56,7 +56,7 @@ Walk the diagram left to right and follow the numbers:
 5. "On WhatsApp, a message reaches **OpenWA**, an open-source WhatsApp gateway running on a small **EC2** server. It calls our webhook, and the second Lambda answers using the *same* core code."
 6. "Replies, check-in prompts and trusted-contact alerts go back through OpenWA."
 - "Secrets are in **SSM Parameter Store**, and everything is logged in **CloudWatch**. The whole stack is **Terraform**, and every push to GitHub deploys automatically."
-- Dashed boxes: "Orange dashed is simulated: we replay a real road route instead of live GPS. Grey dashed is planned: Cognito and Amazon Location Service."
+- Dashed boxes: "Orange dashed is simulated: we replay a real road route instead of live GPS. Grey dashed is planned: Amazon Location Service. Cognito (operator sign-in) and SNS (SMS + alert emails) are built."
 
 ## 4. Frontend (B, 0:45)
 Quick tour (or fold into the demo): **Ride** (booking + fare comparison) → **Trip** (map, driver, Safe Journey, trusted contact, WhatsApp link, safety log) → **Assistant** → **WhatsApp** (QR + simulator) → **Fleet** (operator dashboard) → **About** (status). "It's responsive: here it is on a phone." Show it on your phone, or resize the browser window.
@@ -82,7 +82,7 @@ Quick tour (or fold into the demo): **Ride** (booking + fare comparison) → **T
 ## 7. Live demo (B, 3:30)
 
 ### Before you present (15 minutes before)
-1. Open the **live URL** (`make url`). Open **Fleet** and enter the team code (`make code`). The browser remembers it. Press **Run demo fleet** once and stop it, to warm up Lambda and Bedrock.
+1. Open the **live URL** (`make url`). Open **Fleet** and sign in with your operator email (Cognito; the tab keeps you signed in until it's closed). Press **Run demo fleet** once and stop it, to warm up Lambda and Bedrock.
 2. **Warm up**: book a quick trip and trigger one stop, so Lambda and Bedrock are warm.
 3. Phone: WhatsApp chat with the bot number open. Send `hi` once to check it replies.
 4. Zoom the browser to **125%**. Turn notifications off.
@@ -101,7 +101,7 @@ Before the demo, on the **Ride** page put **your own or your teammate's number**
 | 1:10 | Point at the phone: the check-in arrives. **Don't answer it.** | "Without Thandi pressing anything, she gets: *Thandi, your trip has left the route. Are you safe? Reply 1 = Safe, 2 = Help.* One question, one tap. If she wants to know why, the Bedrock assistant explains." |
 | 1:20 | *(Optional, if time)* On the first alert reply on WhatsApp in words: "we took a detour, still going to Sandton". | "She can answer in her own words. The AI understood it was a detour and closed the alert. If it isn't sure, it asks again; it never assumes she's OK." Then trigger the stop and don't answer. |
 | 1:30 | Wait ~4 s (2 min of trip time; a reminder arrives at half). The safety log shows *escalated*. | "She doesn't answer. Maybe she can't. So the system acts for her: her mom is alerted with the driver, plate and location." |
-| 1:50 | **Fleet** page (team code already saved). | "This is the product the operator buys. Every live trip. Thandi's is flashing red…" |
+| 1:50 | **Fleet** page (already signed in). | "This is the product the operator buys. Every live trip. Thandi's is flashing red…" |
 | 2:00 | Read the **AI triage** sentence aloud. Click **Called driver**. | "…and Bedrock has written the next action for the fleet manager. The operator takes ownership with one click, and it's logged." |
 | 2:20 | **Run demo fleet**. Let it run 20 s. | "Here's what it looks like with a fleet. Most trips are green. Thabo's car leaves the route, amber, he replies *I'm OK*, back to green. Sarah's car stops off-route and she doesn't answer: red, with triage." |
 | 2:50 | **Phone, WhatsApp**: `CHECK BX 33 KK GP`, then "The driver locked the doors and wants more money". | "And the passenger side still works without data: a plate check flags a suspended driver, and the same assistant answers in plain language." |
@@ -119,7 +119,7 @@ Before the demo, on the **Ride** page put **your own or your teammate's number**
 Show the **About** page list. Say it plainly:
 - **Completed:** booking, journey + Safe Journey Mode, both rules, proactive WhatsApp check-ins + escalation, Bedrock assistant + Guardrail, AI triage + fleet dashboard with operator acknowledge, fare comparison, WhatsApp channel, Terraform + CI/CD + monitoring.
 - **Simulated:** trip positions and speed (no live GPS), the demo fleet, drivers, vehicles and safety scores (demo registry), notifications and operator actions such as "Escalated to SAPS" (real WhatsApp messages from our prototype number, rate-limited).
-- **Outstanding / next:** Cognito accounts, live GPS with Amazon Location Service, multilingual assistant (isiZulu, Sesotho, Afrikaans), official WhatsApp Business API (AWS End User Messaging Social) to replace OpenWA, and operator partnerships for verified drivers and emergency response.
+- **Outstanding / next:** passenger accounts, live GPS with Amazon Location Service, multilingual assistant (isiZulu, Sesotho, Afrikaans), official WhatsApp Business API (AWS End User Messaging Social) to replace OpenWA, and operator partnerships for verified drivers and emergency response.
 
 ## Business model: "How it pays for itself" (A, 0:45, slide after "Safer and more affordable")
 - "Passengers ride free. Our users are price-sensitive, so safety can't be a premium extra."

@@ -1,3 +1,4 @@
+import { authHeaders, signOut } from './auth'
 import type {
   AiResult, AppConfig, CheckinReply, Dashboard, Health, OpsConfig, DriverLookup, PhotoCheck, Place, Quote, SafetyEvent, TelemetryResult, Trip,
 } from './types'
@@ -19,6 +20,16 @@ async function req<T>(method: string, path: string, body?: unknown, headers: Rec
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new ApiError(res.status, data.error || `Request failed (${res.status})`)
   return data as T
+}
+
+/** Operator endpoints: Cognito ID token (or the local team code). A 401 signs the operator out. */
+async function opReq<T>(method: string, path: string, body?: unknown): Promise<T> {
+  try {
+    return await req<T>(method, path, body, await authHeaders())
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 401 || e.status === 403)) signOut()
+    throw e
+  }
 }
 
 export type BookRequest = {
@@ -47,10 +58,8 @@ export const api = {
     req<SafetyEvent>('POST', `/trips/${id}/events/${ev}/checkin`, { response, prompt_ms }),
   reply: (id: string, ev: string, text: string) => req<CheckinReply>('POST', `/trips/${id}/events/${ev}/reply`, { text }),
   photoCheck: (image: string, mime: string) => req<PhotoCheck>('POST', '/drivers/photo-check', { image, mime }),
-  opsConfig: (code: string, patch?: Partial<OpsConfig>) =>
-    patch === undefined
-      ? req<OpsConfig>('GET', '/ops/config', undefined, { 'x-team-code': code })
-      : req<OpsConfig>('PUT', '/ops/config', patch, { 'x-team-code': code }),
+  opsConfig: (patch?: Partial<OpsConfig>) =>
+    patch === undefined ? opReq<OpsConfig>('GET', '/ops/config') : opReq<OpsConfig>('PUT', '/ops/config', patch),
   explain: (id: string, ev: string) => req<AiResult>('POST', `/trips/${id}/events/${ev}/explain`, {}),
   sos: (id: string, share = false) => req<SafetyEvent>('POST', `/trips/${id}/sos`, { share }),
   lookup: (q: string) => req<DriverLookup>('GET', `/drivers/lookup?q=${encodeURIComponent(q)}`),
@@ -58,10 +67,9 @@ export const api = {
     req<AiResult>('POST', '/assistant', { message, trip_id, history }),
   waSimulate: (session: string, text: string) => req<{ replies: string[] }>('POST', '/whatsapp/simulate', { session, text }),
   waOutbox: (session: string) => req<{ messages: { text: string; at: string }[] }>('GET', `/whatsapp/outbox?session=${session}`),
-  health: (code: string) => req<Health>('GET', '/ops/health', undefined, { 'x-team-code': code }),
-  dashboard: (code: string) => req<Dashboard>('GET', '/dashboard', undefined, { 'x-team-code': code }),
-  ack: (code: string, id: string, ev: string, action: string) =>
-    req<SafetyEvent>('POST', `/trips/${id}/events/${ev}/ack`, { action }, { 'x-team-code': code }),
+  health: () => opReq<Health>('GET', '/ops/health'),
+  dashboard: () => opReq<Dashboard>('GET', '/dashboard'),
+  ack: (id: string, ev: string, action: string) => opReq<SafetyEvent>('POST', `/trips/${id}/events/${ev}/ack`, { action }),
 }
 
 /** This browser's WhatsApp simulator chat (also where check-ins go when WhatsApp isn't connected, e.g. local mode). */

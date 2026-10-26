@@ -31,10 +31,19 @@ def _body(event):
         raise trips.BadRequest("Body must be JSON")
 
 
-def _require_team_code(event):
+def _require_operator(event):
+    """Operator routes: on AWS, API Gateway has already verified the Cognito ID token (JWT authorizer) and we
+    check the 'operators' group. Local mode (make local, tests) has no Cognito: TEAM_CODE is used instead."""
+    claims = (((event.get("requestContext") or {}).get("authorizer") or {}).get("jwt") or {}).get("claims") or {}
+    if claims:
+        groups = str(claims.get("cognito:groups", "")).strip("[]").replace(",", " ").split()  # HTTP APIs: "[a b]"
+        if "operators" not in groups:
+            raise PermissionError("Operator access required")
+        return claims.get("email") or claims.get("sub")
     given = (event.get("headers") or {}).get("x-team-code", "")
     if not TEAM_CODE or not hmac.compare_digest(given.encode(), TEAM_CODE.encode()):
-        raise PermissionError("Team code required")
+        raise PermissionError("Operator sign-in required")
+    return "team-code"
 
 
 def config(event, body):
@@ -47,6 +56,8 @@ def config(event, body):
         "model": assistant.MODEL_ID,
         "guardrail": bool(os.environ.get("GUARDRAIL_ID")),
         "checkin_timeout_s": trips.get_ops_config()["checkin_timeout_s"],
+        "cognito": {"region": os.environ.get("AWS_REGION"), "user_pool_id": os.environ["COGNITO_USER_POOL_ID"],
+                    "client_id": os.environ.get("COGNITO_CLIENT_ID")} if os.environ.get("COGNITO_USER_POOL_ID") else None,
         "region": os.environ.get("AWS_REGION"),
     }
 
@@ -96,7 +107,7 @@ def wa_outbox(event, body):
 
 
 def dashboard(event, body):
-    _require_team_code(event)
+    _require_operator(event)
     return trips.dashboard()
 
 
@@ -120,18 +131,18 @@ def photo_check(event, body):
 
 
 def ops_health(event, body):
-    _require_team_code(event)
+    _require_operator(event)
     return health.snapshot()
 
 
 def ops_config(event, body):
-    _require_team_code(event)
+    _require_operator(event)
     method = event["requestContext"]["http"]["method"]
     return trips.set_ops_config(body) if method == "PUT" else trips.get_ops_config()
 
 
 def acknowledge(event, body, trip, ev):
-    _require_team_code(event)
+    _require_operator(event)
     return trips.acknowledge(trip.upper(), ev, body.get("action"))
 
 

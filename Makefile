@@ -5,7 +5,7 @@ PY   := .venv/bin/python
 # The active AWS target (account + region) is whatever infra/backend.hcl points at (scripts/switch_account.sh).
 REGION ?= $(shell sed -n 's/^region *= *"\(.*\)"/\1/p' infra/backend.hcl)
 
-.PHONY: help setup test web lint e2e local local-ai init plan deploy site url code logs logs-wa wa-setup wa-qr wa-status wa-dashboard wa-restart wa-send sms-verify switch destroy
+.PHONY: help setup test web lint e2e local local-ai init plan deploy site url logs logs-wa wa-setup wa-qr wa-status wa-dashboard wa-restart wa-send sms-verify switch destroy
 
 help:
 	@echo "setup      .venv + web/node_modules"
@@ -14,7 +14,7 @@ help:
 	@echo "local-ai   same, but with real Amazon Bedrock (needs aws login)"
 	@echo "e2e        Playwright journey tests (E2E_URL=... for the live site)"
 	@echo "deploy     tests -> terraform plan/apply -> upload site"
-	@echo "url/code   live URL / dashboard team code"
+	@echo "url        live URL (Fleet page sign-in: Amazon Cognito, invite emails go to admin_emails)"
 	@echo "wa-setup   create the OpenWA session + webhook (once), wa-qr shows the QR to scan"
 	@echo "wa-restart recreate OpenWA if WhatsApp sends hang (fresh browser, keeps the login; ~1 min)"
 	@echo "wa-send    TO=0821234567 [MSG='...']: send a test WhatsApp message through the real path"
@@ -69,9 +69,6 @@ site:
 
 url:
 	@$(TF) output -raw web_url; echo
-
-code:
-	@$(TF) output -raw team_code; echo
 
 logs:
 	$(CREDS) aws logs tail "$$($(TF) output -raw api_log_group)" --follow --format short --region $(REGION)

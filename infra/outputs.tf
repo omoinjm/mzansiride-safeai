@@ -12,10 +12,8 @@ output "webhook_url" {
   value       = "${aws_apigatewayv2_api.main.api_endpoint}/whatsapp/webhook"
 }
 
-output "team_code" {
-  description = "Code for the operator dashboard."
-  value       = local.team_code
-  sensitive   = true
+output "operator_pool_id" {
+  value = aws_cognito_user_pool.operators.id
 }
 
 output "web_bucket" {

@@ -8,7 +8,7 @@ const DOT = { ok: 'bg-emerald-500', degraded: 'bg-amber-500', down: 'bg-red-500'
 const LABEL = { ok: 'OK', degraded: 'Degraded', down: 'Down', not_configured: 'Not connected', paused: 'Paused by operator' } as const
 
 /** System health for the operator: WhatsApp, AI, today's messages, recent errors. Counts only, no raw logs. */
-export default function HealthPanel({ code }: { code: string }) {
+export default function HealthPanel() {
   const [h, setH] = useState<Health | null>(null)
   const [err, setErr] = useState('')
 
@@ -16,7 +16,7 @@ export default function HealthPanel({ code }: { code: string }) {
     let live = true
     const load = () =>
       api
-        .health(code)
+        .health()
         .then((r) => live && (setH(r), setErr('')))
         .catch((e) => live && setErr((e as Error).message))
     load()
@@ -25,7 +25,7 @@ export default function HealthPanel({ code }: { code: string }) {
       live = false
       clearInterval(t)
     }
-  }, [code])
+  }, [])
 
   if (!h) return err ? <p className="text-sm text-red-700">System health unavailable: {err}</p> : null
   const wa = h.whatsapp

@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { Activity, Bell, Car, CirclePlay, CircleStop, Lock, MessageCircle, Phone, RefreshCw, ShieldAlert, ShieldCheck, Siren, Sparkles, Timer } from 'lucide-react'
-import { api, save, store } from '../lib/api'
+import { Activity, Bell, Car, CirclePlay, CircleStop, LogOut, MessageCircle, Phone, RefreshCw, ShieldAlert, ShieldCheck, Siren, Sparkles, Timer } from 'lucide-react'
+import { api, ApiError, save, store } from '../lib/api'
+import { operatorName, signedIn, signOut } from '../lib/auth'
 import { FleetDemo } from '../lib/fleet'
 import type { Dashboard, FleetRow, OpsConfig, Risk, SafetyEvent } from '../lib/types'
 import FleetMap from '../components/FleetMap'
 import HealthPanel from '../components/HealthPanel'
+import OperatorSignIn from '../components/OperatorSignIn'
 import { Pill, Section, SimBadge, Spinner } from '../components/ui'
 import { EVENT_LABEL, RISK_COLOUR, timeAgo } from '../lib/format'
 
 const RISK_LABEL: Record<Risk, string> = { red: 'Needs action', amber: 'Awaiting check-in', handled: 'Operator handling', green: 'Normal' }
 
 export default function DashboardPage() {
-  const [code, setCode] = useState(store('mz.teamCode', ''))
+  const [authed, setAuthed] = useState(signedIn())
   const [tab, setTab] = useState<'events' | 'trips'>(store('mz.fleetTab', 'events'))
-  const [draft, setDraft] = useState('')
   const [data, setData] = useState<Dashboard | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,34 +26,31 @@ export default function DashboardPage() {
   const waitS = ops?.checkin_timeout_s ?? null
 
   useEffect(() => {
-    if (code) api.opsConfig(code).then(setOps).catch(() => {})
-  }, [code])
+    if (authed) api.opsConfig().then(setOps).catch(() => {})
+  }, [authed])
 
   async function changeWait(s: number) {
-    setOps(await api.opsConfig(code, { checkin_timeout_s: s }))
+    setOps(await api.opsConfig({ checkin_timeout_s: s }))
   }
 
   async function toggleWhatsApp(on: boolean) {
     if (!on && !window.confirm('Switch WhatsApp off? No WhatsApp check-ins, alerts or replies will be sent until you switch it back on.')) return
-    setOps(await api.opsConfig(code, { whatsapp_enabled: on }))
+    setOps(await api.opsConfig({ whatsapp_enabled: on }))
   }
 
   const load = useCallback(async () => {
-    if (!code) return
+    if (!authed) return
     setLoading(true)
     try {
-      setData(await api.dashboard(code))
+      setData(await api.dashboard())
       setError('')
     } catch (e) {
       setError((e as Error).message)
-      if ((e as { status?: number }).status === 401) {
-        setCode('')
-        save('mz.teamCode', '')
-      }
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) setAuthed(signedIn()) // opReq signed out
     } finally {
       setLoading(false)
     }
-  }, [code])
+  }, [authed])
 
   useEffect(() => {
     load()
@@ -87,31 +85,11 @@ export default function DashboardPage() {
 
   async function ack(f: FleetRow, action: string) {
     if (!f.triage) return
-    await api.ack(code, f.trip_id, f.triage.event_id, action)
+    await api.ack(f.trip_id, f.triage.event_id, action)
     load()
   }
 
-  if (!code)
-    return (
-      <form
-        className="card mx-auto mt-10 max-w-sm space-y-3 p-6"
-        onSubmit={(e) => {
-          e.preventDefault()
-          save('mz.teamCode', draft)
-          setCode(draft)
-        }}
-      >
-        <h1 className="flex items-center gap-2 text-lg font-extrabold">
-          <Lock size={18} /> Operator dashboard
-        </h1>
-        <p className="text-sm text-slate-600">For transport operators and the team. Enter the team code.</p>
-        <input className="input" type="password" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Team code" autoFocus />
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <button className="btn-primary w-full" disabled={!draft}>
-          Open dashboard
-        </button>
-      </form>
-    )
+  if (!authed) return <OperatorSignIn error={error} onSignedIn={() => (setError(''), setAuthed(true))} />
 
   if (!data) return <div className="flex justify-center py-20">{error ? <p className="text-red-700">{error}</p> : <Spinner className="h-8 w-8 text-brand-600" />}</div>
   const s = data.summary
@@ -134,6 +112,17 @@ export default function DashboardPage() {
         </button>
         <button className="btn-ghost" onClick={load} disabled={loading}>
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh
+        </button>
+        <button
+          className="btn-ghost"
+          title={`Signed in: ${operatorName()}`}
+          onClick={() => {
+            signOut()
+            setData(null)
+            setAuthed(false)
+          }}
+        >
+          <LogOut size={16} /> Sign out
         </button>
       </div>
       <p className="-mt-3 text-sm text-slate-600">
@@ -180,7 +169,7 @@ export default function DashboardPage() {
 
       <Fleet fleet={data.fleet} onAck={ack} log={demoLog} />
 
-      <HealthPanel code={code} />
+      <HealthPanel />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
         {tiles.map(({ label, value, sub, icon: I }) => (

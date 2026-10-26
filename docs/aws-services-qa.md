@@ -9,7 +9,7 @@ Read this together before Monday. Every service below answers four questions: **
 > Lambda applies our safety rules to the trip telemetry, stores trips and alerts in **DynamoDB**, and asks **Bedrock** (Claude) to
 > explain alerts to the passenger and, when an alert escalates, to write a triage action for the operator's safety team, with a
 > **Guardrail** on top. WhatsApp messages arrive through **OpenWA** on a small **EC2** server and are handled by a
-> second Lambda using the same code. Secrets live in **SSM Parameter Store**, logs and alarms in **CloudWatch**, and it's all
+> second Lambda using the same code. Secrets live in **SSM Parameter Store**, logs and alarms in **CloudWatch** (alarms email the team through **SNS**, which also texts the trusted contact on SOS), operators sign in with **Cognito**, and it's all
 > **Terraform**, deployed from GitHub with **OIDC**."
 
 ---
@@ -69,6 +69,17 @@ Read this together before Monday. Every service below answers four questions: **
 
 ---
 
+## Amazon Cognito (operator sign-in)
+- **What:** an invite-only user pool for the operator's safety team (group `operators`). The Fleet page signs in with email and password; the first sign-in sets a new password. API Gateway's **JWT authoriser** checks the ID token on the operator routes (dashboard, ops settings, health, acknowledge) before Lambda runs, and the Lambda checks the group.
+- **Why:** it replaced a shared team code: now access is per person, can be revoked per person, and tokens expire after an hour (refreshed for 7 days).
+- **Cost:** free at our size. **Alternative:** the Cognito hosted login page (more redirects for a single form), or IAM Identity Center (for staff using AWS, not an app).
+- **Detail worth knowing:** the token travels in an `x-operator-token` header because CloudFront strips `Authorization` from GET requests unless it's part of the cache key.
+
+## Amazon SNS (SMS + alert emails) and EventBridge
+- **SMS:** one text to the trusted contact when the passenger presses SOS or says "I need help", in plain GSM text so it fits in two segments. It doesn't need WhatsApp or data on the contact's phone. Rate-limited per number. New accounts are in the **SMS sandbox**: only verified numbers receive texts until AWS grants production access.
+- **Alert emails:** EventBridge runs a health check every 5 minutes and publishes `MzansiRide/Health` metrics. CloudWatch alarms (gateway down, AI on fallback, SMS failing, Lambda errors, API 5xx, the check itself not reporting) email the team through an SNS topic, on alarm and on recovery.
+- **Alternative:** End User Messaging SMS for registered sender IDs at scale; a paging tool (PagerDuty, Opsgenie) once there's an on-call rota.
+
 ## Tough questions: practice answers
 
 1. **"Why not just use Uber's safety features?"** They exist, but they're inside one company's app and need data. We bring check-ins, explanations and trusted contacts together, and make them work on WhatsApp for people without data. The approach could also serve minibus taxi or e-hailing operators that have no safety tooling.
@@ -87,8 +98,8 @@ Read this together before Monday. Every service below answers four questions: **
 14. **"Why two Lambdas?"** Different triggers and permissions: only the WhatsApp function can read gateway secrets. And WhatsApp must acknowledge within 10 s, so it processes asynchronously. They share the same `core` code, so behaviour is identical.
 15. **"What happens if Bedrock is down or throttled?"** Boto3 retries, then the fallback text, labelled in the UI. Alerts, check-ins and escalation are unaffected.
 16. **"Why not detect deviations with real maps?"** That's out of scope for the prototype (proposal §8.2). We use real OSM road geometry and point-to-polyline distance. With Amazon Location Service we'd recompute routes when the driver legitimately re-routes, which also reduces false alarms.
-17. **"How did you test it?"** 48 unit tests (rules: no false alarm on a normal trip, short stops ignored, waiting at pickup ignored, latching; fares; driver lookup; AI model fallback; triage and fleet risk colours; proactive WhatsApp link; webhook signature and dedupe; the full API journey with DynamoDB mocked by moto) plus Playwright end-to-end tests of the real UI. CI runs them on every push.
-18. **"What would you do with another week?"** Cognito accounts, live GPS with Amazon Location Service, a multilingual assistant, the official WhatsApp API, an AI evaluation suite, and a pilot with a student transport operator.
+17. **"How did you test it?"** 80 unit tests (rules: no false alarm on a normal trip, short stops ignored, waiting at pickup ignored, latching; fares; driver lookup; AI model fallback; triage and fleet risk colours; proactive WhatsApp link; webhook signature and dedupe; the full API journey with DynamoDB mocked by moto) plus Playwright end-to-end tests of the real UI. CI runs them on every push.
+18. **"What would you do with another week?"** Passenger accounts, live GPS with Amazon Location Service, a multilingual assistant, the official WhatsApp API, an AI evaluation suite, and a pilot with a student transport operator.
 19. **"Who did what?"** Answer honestly and together. Both of you should be able to walk the diagram and the demo (that's why this doc exists).
 20. **"Could you have used Amazon Lex or Amazon Connect?"** Lex suits structured intents (we have a few commands). Free-text safety questions suit an LLM better. Connect would add voice/USSD-style access for feature phones, which is a good future channel.
 21. **"Why two AI models?"** Claude Haiku 5.5 is the main model: fast, cheap and good at calm, careful wording. If Bedrock refuses it (for example while Anthropic model access is still being approved for the account), the same request goes to Amazon Nova Lite, an Amazon-owned model that needs no extra approval. Same prompt, same Guardrail. If Bedrock is down entirely, the app shows the rules-based message instead. The response records which model answered, and the logs show it too.

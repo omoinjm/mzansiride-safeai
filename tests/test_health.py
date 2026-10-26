@@ -81,3 +81,18 @@ def test_scheduled_check_publishes_metrics(aws, monkeypatch):
     assert m["SmsHealthy"] == 0 and m["WhatsAppHealthy"] == 0
     call("PUT", "/api/ops/config", {"whatsapp_enabled": False}, headers=CODE)  # paused is not an outage
     assert handler.handler({"action": "health_check"}, None)["WhatsAppHealthy"] == 1
+
+
+def test_operator_routes_accept_cognito_operators_only(aws, monkeypatch):
+    from api import handler
+    monkeypatch.setattr(handler, "TEAM_CODE", "")  # as on AWS: no team code
+    def ev(groups):
+        e = {"rawPath": "/api/ops/config", "requestContext": {"http": {"method": "GET"}}, "headers": {}}
+        if groups is not None:
+            e["requestContext"]["authorizer"] = {"jwt": {"claims": {"email": "op@example.com", "cognito:groups": groups}}}
+        return handler.handler(e, None)["statusCode"]
+    assert ev("[operators]") == 200
+    assert ev("[admins operators]") == 200
+    assert ev("[passengers]") == 401 and ev("[operators-old]") == 401
+    assert ev(None) == 401
+    assert call("GET", "/api/ops/config", headers=CODE)[0] == 401  # the old team code no longer works on AWS

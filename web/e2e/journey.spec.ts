@@ -1,7 +1,19 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const shots = process.env.SHOTS_DIR || '../docs/screenshots'
 const TEAM_CODE = process.env.TEAM_CODE || 'local'
+
+/** Fleet page sign-in: Cognito on the live site (E2E_USER/E2E_PASS), the team code locally. */
+async function signIn(page: Page) {
+  if (process.env.E2E_USER) {
+    await page.getByPlaceholder('Email').fill(process.env.E2E_USER)
+    await page.getByPlaceholder('Password').fill(process.env.E2E_PASS || '')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+  } else {
+    await page.getByPlaceholder('Team code').fill(TEAM_CODE)
+    await page.getByRole('button', { name: 'Open dashboard' }).click()
+  }
+}
 
 test('main passenger journey: book → Safe Journey → stop + deviation check-ins → dashboard', async ({ page }) => {
   const errors: string[] = []
@@ -49,8 +61,7 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
   await page.screenshot({ path: `${shots}/05-safety-log.png`, fullPage: true })
 
   await page.getByRole('link', { name: 'Fleet' }).first().click()
-  await page.getByPlaceholder('Team code').fill(TEAM_CODE)
-  await page.getByRole('button', { name: 'Open dashboard' }).click()
+  await signIn(page)
   await expect(page.getByText('Fleet safety dashboard')).toBeVisible()
   await expect(page.getByRole('cell', { name: /Prolonged stop/ }).first()).toBeVisible()
   await page.getByRole('tab', { name: /Recent trips/ }).click()
@@ -64,8 +75,7 @@ test('main passenger journey: book → Safe Journey → stop + deviation check-i
 test('fleet dashboard: demo fleet → unanswered check-in turns red with AI triage → operator acknowledges', async ({ page }) => {
   test.setTimeout(120_000)
   await page.goto('/dashboard')
-  await page.getByPlaceholder('Team code').fill(TEAM_CODE)
-  await page.getByRole('button', { name: 'Open dashboard' }).click()
+  await signIn(page)
   await expect(page.getByRole('region', { name: 'System health' })).toBeVisible()
   await page.getByRole('button', { name: 'Run demo fleet' }).click()
   await expect(page.locator('[data-risk="green"]').first()).toBeVisible({ timeout: 20_000 })
@@ -129,8 +139,7 @@ test("driver follows Waze's road: no false alarm; commute budget; Ask AI; instal
 test('operator switches WhatsApp off and on', async ({ page }) => {
   page.on('dialog', (d) => d.accept())
   await page.goto('/dashboard')
-  await page.getByPlaceholder('Team code').fill(TEAM_CODE)
-  await page.getByRole('button', { name: 'Open dashboard' }).click()
+  await signIn(page)
   const sw = page.getByRole('switch', { name: 'WhatsApp channel' })
   await expect(sw).toHaveAttribute('aria-checked', 'true')
   await sw.click()
