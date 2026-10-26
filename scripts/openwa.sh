@@ -6,6 +6,7 @@
 #   ./scripts/openwa.sh status   session status
 #   ./scripts/openwa.sh logs     last OpenWA container logs
 #   ./scripts/openwa.sh restart  recreate OpenWA if sends hang (fresh browser; the WhatsApp login is kept, no new QR)
+#   ./scripts/openwa.sh send <phone> [message]  send a test message through the real path (Lambda -> gateway)
 #   ./scripts/openwa.sh dashboard  SSM port-forward: OpenWA dashboard on http://localhost:2785 (never public)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -93,6 +94,19 @@ PY
     # Same settings as openwa/user_data.sh.tftpl. The image is checked before anything is removed.
     remote "$RECREATE"
     ;;
+  send)
+    # Same path the app uses: invoke the whatsapp Lambda's "send" action, which calls the gateway.
+    TO="${2:?usage: $0 send <phone, e.g. 0821234567> [message]}"
+    MSG="${3:-✅ MzansiRide test: WhatsApp is working.}"
+    FN="$($TF output -raw whatsapp_log_group)"; FN="${FN##*/}"
+    DIGITS="$(echo "$TO" | tr -cd '0-9')"; [[ "$DIGITS" == 0* && ${#DIGITS} -eq 10 ]] && DIGITS="27${DIGITS:1}"
+    PAYLOAD="$(python3 -c 'import json,sys; print(json.dumps({"action": "send", "chat_id": sys.argv[1] + "@c.us", "text": sys.argv[2]}))' "$DIGITS" "$MSG")"
+    OUT="$(mktemp)"
+    aws lambda invoke --region "$REGION" --function-name "$FN" --cli-binary-format raw-in-base64-out \
+      --cli-read-timeout 90 --payload "$PAYLOAD" "$OUT" >/dev/null
+    if grep -q '"ok": true' "$OUT"; then echo "Sent to +${DIGITS:0:4}•••${DIGITS: -3}"; rm -f "$OUT";
+    else echo "Send failed: $(head -c 300 "$OUT")"; echo "Try: make wa-restart, then send again."; rm -f "$OUT"; exit 1; fi
+    ;;
   dashboard)
     command -v session-manager-plugin >/dev/null || { echo "Install the AWS session-manager-plugin first" >&2; exit 1; }
     echo "OpenWA dashboard: http://localhost:2785/dashboard  (API key: aws ssm get-parameter --name ${PREFIX}api_key --with-decryption)"
@@ -103,5 +117,5 @@ PY
   logs)
     remote "docker logs --tail 80 openwa 2>&1; docker logs --tail 20 caddy 2>&1"
     ;;
-  *) echo "usage: $0 setup|qr|status|logs|restart|dashboard"; exit 2 ;;
+  *) echo "usage: $0 setup|qr|status|logs|restart|send|dashboard"; exit 2 ;;
 esac

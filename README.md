@@ -179,6 +179,29 @@ model_id     = "eu.anthropic.claude-haiku-5-5"
 
 Use a spare number: OpenWA is an unofficial client, and WhatsApp may restrict accounts that use it.
 
+### WhatsApp: when messages stop arriving
+WhatsApp updates its web app without notice. Sometimes the new version shows a pop-up that OpenWA can't handle,
+and every send times out while the session still says `ready`. Fix it in about a minute, without a new QR scan:
+
+```bash
+aws login --remote            # in a separate terminal, if your session expired
+unset AWS_PROFILE             # use the profile you logged in with (here: default)
+make wa-status                # session state + public health endpoint
+make wa-restart               # recreate the gateway container: fresh browser, same login (~1 min)
+make wa-send TO=0821234567    # send a test message through the real path (Lambda -> gateway)
+make wa-send TO=0821234567 MSG="Demo check"
+make logs-wa                  # tail the WhatsApp Lambda logs if it still fails
+```
+
+- **How you notice:** the **System health** panel on the Fleet page turns the WhatsApp tile amber or red, or
+  `make logs-wa` shows `whatsapp_send_failed … The read operation timed out`.
+- **Why recreate, not restart:** `docker restart` keeps Chromium's cached copy of the broken WhatsApp Web page.
+  `make wa-restart` removes and recreates the container (same settings as `openwa/user_data.sh.tftpl`); the WhatsApp
+  login lives on the `/opt/openwa/data` volume, so it survives. The image is checked before the old container is removed.
+- **If it's still broken:** `make wa-dashboard` opens the OpenWA dashboard through a private tunnel
+  (http://localhost:2785) so you can see the session; as a last resort, re-link with `make wa-qr`.
+- During a demo, the **WhatsApp simulator** page runs the same backend logic and is the fallback.
+
 ### Continuous deployment
 Every push to `main` runs `.github/workflows/deploy.yml`: pytest + typecheck + lint + build → `terraform plan -out` → apply
 that plan → publish the SPA → smoke-test the live URL. PRs run the tests only. One-time: `./scripts/bootstrap_ci.sh`
