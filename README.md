@@ -157,6 +157,17 @@ Solid = implemented · dashed orange = simulated in the prototype · dashed grey
 | Passenger accounts | ⏳ Outstanding | Passengers book without an account today; a Cognito `passengers` group would add trip history |
 | Emergency services, real driver verification, payments, matching | ⏳ Outstanding | Need partners, compliance and operational processes |
 
+## New laptop
+
+```bash
+git clone https://github.com/omoinjm/mzansiride-safeai.git && cd mzansiride-safeai
+make laptop               # tools check, aws login, infra/terraform.tfvars from SSM, deps, terraform init, health check
+make laptop ARGS=--plan   # same, plus a terraform plan that should say "No changes"
+```
+
+`infra/terraform.tfvars` (WhatsApp number, admin emails) is git-ignored; `make laptop-save` on the old laptop keeps an
+encrypted copy in SSM Parameter Store for this. Without it, deploy by pushing to `main`, not `make deploy`.
+
 ## Run it
 
 Prereqs: Terraform ≥ 1.10, Python 3.12+ with `uv`, Node 22+, AWS CLI v2 logged in to the team account (`aws login`), region **eu-west-1**.

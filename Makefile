@@ -5,7 +5,7 @@ PY   := .venv/bin/python
 # The active AWS target (account + region) is whatever infra/backend.hcl points at (scripts/switch_account.sh).
 REGION ?= $(shell sed -n 's/^region *= *"\(.*\)"/\1/p' infra/backend.hcl)
 
-.PHONY: help setup test web lint e2e local local-ai init plan deploy site url logs logs-wa wa-setup wa-qr wa-status wa-dashboard wa-restart wa-send sms-verify switch destroy
+.PHONY: help setup test web lint e2e local local-ai init plan deploy site url logs logs-wa wa-setup wa-qr wa-status wa-dashboard wa-restart wa-send sms-verify switch laptop laptop-save destroy
 
 help:
 	@echo "setup      .venv + web/node_modules"
@@ -22,6 +22,7 @@ help:
 	@echo "logs       tail API logs   logs-wa  tail WhatsApp logs"
 	@echo "switch     REGION_TO=us-east-1 [ARGS='--check|--old-profile default|--ci']: move the stack to the account you're logged into"
 	@echo "sms-verify [NUMBER=0821234567]: SNS SMS sandbox status, or verify a number to receive SMS"
+	@echo "laptop     new laptop: tools check, aws login, tfvars from SSM, deps, terraform init (laptop-save: run once on the old one)"
 	@echo "destroy    tear everything down"
 
 setup:
@@ -93,6 +94,12 @@ wa-restart:
 
 sms-verify:
 	$(CREDS) ./scripts/sms_verify.sh $(or $(NUMBER),status)
+
+laptop:
+	./scripts/new_laptop.sh $(ARGS)
+
+laptop-save:
+	./scripts/new_laptop.sh save
 
 switch:
 	./scripts/switch_account.sh --region "$(or $(REGION_TO),$(REGION))" $(ARGS)
