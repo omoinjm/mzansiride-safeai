@@ -75,3 +75,9 @@ variable "log_retention_days" {
   type    = number
   default = 14
 }
+
+variable "enable_sms" {
+  description = "Send the trusted contact an SMS (Amazon SNS) when the passenger sends SOS or asks for help."
+  type        = bool
+  default     = true
+}

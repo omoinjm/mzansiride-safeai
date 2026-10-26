@@ -35,6 +35,13 @@ data "aws_iam_policy_document" "common" {
     ]
   }
 
+  # SMS to the trusted contact (SOS / "I need help"). Direct-to-phone publishes have no resource to scope to.
+  statement {
+    sid       = "SmsToTrustedContact"
+    actions   = ["sns:Publish"]
+    resources = ["*"]
+  }
+
   dynamic "statement" {
     for_each = var.enable_guardrail ? [1] : []
     content {

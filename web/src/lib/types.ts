@@ -42,6 +42,7 @@ export type Notification = {
   text: string
   channel: string
   status: string
+  sms?: { to: string; status: string }
 }
 
 export type AiResult = { text: string; source: 'bedrock' | 'guardrail' | 'fallback'; model: string | null }
@@ -176,7 +177,7 @@ export type Health = {
     status: 'ok' | 'degraded'
   }
   messages_today: Record<
-    | 'whatsapp_sent' | 'whatsapp_failed' | 'whatsapp_received' | 'whatsapp_undeliverable'
+    | 'whatsapp_sent' | 'whatsapp_failed' | 'whatsapp_received' | 'whatsapp_undeliverable' | 'sms_sent' | 'sms_failed'
     | 'contact_alerts_whatsapp' | 'contact_alerts_simulated' | 'contact_alerts_rate_limited',
     number
   >

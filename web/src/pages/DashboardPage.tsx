@@ -260,6 +260,7 @@ export default function DashboardPage() {
                     {e.notifications?.map((n, i) => (
                       <span key={i} className="mr-1">
                         <Pill status={n.status} />
+                        {n.sms && <span className="ml-1 text-xs text-slate-600">SMS {n.sms.status.replaceAll('_', ' ')}</span>}
                       </span>
                     ))}
                   </td>

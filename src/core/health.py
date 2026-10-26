@@ -117,6 +117,7 @@ def snapshot():
         "messages_today": {
             "whatsapp_sent": n("wa_sent"), "whatsapp_failed": n("wa_failed"), "whatsapp_received": n("wa_received"),
             "whatsapp_undeliverable": n("wa_undeliverable"),
+            "sms_sent": n("sms_sent"), "sms_failed": n("sms_failed"),
             "contact_alerts_whatsapp": n("contact_whatsapp"), "contact_alerts_simulated": n("contact_simulated"),
             "contact_alerts_rate_limited": n("contact_rate_limited"),
         },

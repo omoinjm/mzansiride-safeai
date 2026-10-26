@@ -31,6 +31,7 @@ locals {
     WA_NUMBER         = var.wa_number
     OPENWA_HEALTH_URL = var.enable_whatsapp ? "https://${local.wa_host}/api/health" : ""
     DASHBOARD_URL     = local.dashboard_url
+    SMS_ENABLED       = tostring(var.enable_sms)
   }
 }
 

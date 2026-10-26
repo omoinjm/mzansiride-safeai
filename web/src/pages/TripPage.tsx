@@ -535,8 +535,9 @@ function EventsTimeline({ events }: { events: SafetyEvent[] }) {
                   <span>
                     {n.to_name} {n.to} · {n.channel}
                   </span>
-                  <span className="ml-auto">
+                  <span className="ml-auto flex gap-1">
                     <Pill status={n.status} />
+                    {n.sms && <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700">SMS {n.sms.status.replaceAll('_', ' ')}</span>}
                   </span>
                 </div>
               ))}

@@ -75,6 +75,8 @@ elif [ -z "$PRIMARY" ]; then
 fi
 FALLBACK="${FALLBACK:-$PRIMARY}"
 echo "Primary model: $PRIMARY   Fallback: $FALLBACK"
+SANDBOX="$(aws sns get-sms-sandbox-account-status --region "$REGION" --query IsInSandbox --output text 2>/dev/null || echo unknown)"
+echo "SNS SMS sandbox: $SANDBOX   (if True, verify each demo number: make sms-verify NUMBER=0821234567)"
 
 if [ "$CHECK_ONLY" = 1 ]; then
   step "Check only: nothing was changed. Re-run without --check to switch."

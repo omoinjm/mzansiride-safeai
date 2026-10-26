@@ -184,9 +184,58 @@ def notify_trusted_contact(trip, event, reason):
     kind = {"simulated": "simulated", "rate_limited": "rate_limited", "no_contact_set": "none",
             "paused": "paused"}.get(record["status"], "whatsapp")
     health.record({f"contact_{kind}": 1})
+    if phone and reason in SMS_REASONS:  # SMS is one-way and only for "I need help" and SOS
+        record["sms"] = {"to": mask(phone), "status": send_sms(phone, sms_text(trip, event, reason))}
     log("INFO", "contact_notified", trip=trip["trip_id"], reason=reason, status=record["status"],
-        channel=record["channel"])
+        channel=record["channel"], sms=(record.get("sms") or {}).get("status"))
     return record
+
+
+# ---------- SMS via Amazon SNS (one message per alert, no conversation) ----------
+
+SMS_REASONS = ("passenger_help", "passenger_sos")
+
+
+def sms_enabled():
+    return os.environ.get("SMS_ENABLED", "").lower() == "true"
+
+
+def _gsm(text):
+    """Plain characters only: an emoji or accent switches SMS to UCS-2 and halves the length per segment."""
+    return text.encode("ascii", "ignore").decode()
+
+
+def sms_text(trip, event, reason):
+    d = trip.get("driver") or {}
+    pos = (event or {}).get("lat"), (event or {}).get("lng")
+    if pos[0] is None and trip.get("last_position"):
+        pos = trip["last_position"].get("lat"), trip["last_position"].get("lng")
+    where = f" Last seen: https://maps.google.com/?q={pos[0]:.5f},{pos[1]:.5f}." if pos[0] is not None else ""
+    what = "asked for HELP on a ride" if reason == "passenger_help" else "sent an SOS from a ride"
+    return _gsm(f"MzansiRide: {trip.get('passenger_name', 'A passenger')} {what}. Car {d.get('plate')} "
+                f"({d.get('colour', '')} {d.get('vehicle', '')}).{where} Call them now. Danger: 10111.")
+
+
+def send_sms(phone, text):
+    """Returns sent / simulated / rate_limited / failed. Never raises: the safety flow must not depend on SMS."""
+    if not (sms_enabled() and deliverable(phone)):
+        return "simulated"
+    if not take_send_quota(phone):
+        return "rate_limited"
+    try:
+        import boto3
+
+        boto3.client("sns").publish(
+            PhoneNumber="+" + msisdn(phone), Message=text,
+            MessageAttributes={"AWS.SNS.SMS.SMSType": {"DataType": "String", "StringValue": "Transactional"},
+                               "AWS.SNS.SMS.SenderID": {"DataType": "String", "StringValue": "MzansiRide"}})
+        health.record({"sms_sent": 1})
+        log("INFO", "sms_sent", to=mask(phone), chars=len(text))
+        return "sent"
+    except Exception as e:  # sandbox (unverified number), spend limit, unsupported destination...
+        health.record({"sms_failed": 1}, sms_last_error_at=health._now(), sms_last_error=str(e)[:150])
+        log("WARN", "sms_failed", to=mask(phone), error=str(e)[:300])
+        return "failed"
 
 
 NOTICED = {
