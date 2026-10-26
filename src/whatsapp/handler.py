@@ -88,8 +88,24 @@ def _gateway_failed(chat_id, e):
     log("ERROR", "whatsapp_send_failed", chat=notify.mask(chat_id), error=str(e)[:300])
 
 
+PAUSED_REPLY = "MzansiRide WhatsApp is paused right now. Please use the app.\nIn danger? Call *10111*."
+
+
+def _paused_reply(chat_id):
+    """While the operator has WhatsApp off: at most one short reply per chat per hour, nothing else."""
+    hour = time.strftime("%Y%m%d%H", time.gmtime())
+    if store.put_once("whatsapp", {"pk": f"paused#{chat_id}#{hour}", "ttl": store.ttl_days(1)}):
+        _send(chat_id, PAUSED_REPLY)
+    log("INFO", "whatsapp_paused_inbound", chat=notify.mask(chat_id))
+
+
 def handle_action(event):
     action = event["action"]
+    if action in ("process", "photo") and notify.whatsapp_paused():
+        _paused_reply(event["chat_id"])
+        return {"ok": True, "paused": True}
+    if action == "checkin_prompt" and notify.whatsapp_paused():
+        return {"ok": True, "paused": True}
     if action == "send":
         _send(event["chat_id"], event["text"])
     elif action == "checkin_prompt":

@@ -1,5 +1,5 @@
 import type {
-  AiResult, AppConfig, CheckinReply, Dashboard, Health, DriverLookup, PhotoCheck, Place, Quote, SafetyEvent, TelemetryResult, Trip,
+  AiResult, AppConfig, CheckinReply, Dashboard, Health, OpsConfig, DriverLookup, PhotoCheck, Place, Quote, SafetyEvent, TelemetryResult, Trip,
 } from './types'
 
 export class ApiError extends Error {
@@ -47,10 +47,10 @@ export const api = {
     req<SafetyEvent>('POST', `/trips/${id}/events/${ev}/checkin`, { response, prompt_ms }),
   reply: (id: string, ev: string, text: string) => req<CheckinReply>('POST', `/trips/${id}/events/${ev}/reply`, { text }),
   photoCheck: (image: string, mime: string) => req<PhotoCheck>('POST', '/drivers/photo-check', { image, mime }),
-  opsConfig: (code: string, checkin_timeout_s?: number) =>
-    checkin_timeout_s === undefined
-      ? req<{ checkin_timeout_s: number }>('GET', '/ops/config', undefined, { 'x-team-code': code })
-      : req<{ checkin_timeout_s: number }>('PUT', '/ops/config', { checkin_timeout_s }, { 'x-team-code': code }),
+  opsConfig: (code: string, patch?: Partial<OpsConfig>) =>
+    patch === undefined
+      ? req<OpsConfig>('GET', '/ops/config', undefined, { 'x-team-code': code })
+      : req<OpsConfig>('PUT', '/ops/config', patch, { 'x-team-code': code }),
   explain: (id: string, ev: string) => req<AiResult>('POST', `/trips/${id}/events/${ev}/explain`, {}),
   sos: (id: string, share = false) => req<SafetyEvent>('POST', `/trips/${id}/sos`, { share }),
   lookup: (q: string) => req<DriverLookup>('GET', `/drivers/lookup?q=${encodeURIComponent(q)}`),

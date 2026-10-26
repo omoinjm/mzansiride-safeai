@@ -1,15 +1,20 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { Car, Info, LayoutDashboard, MessageCircle, Navigation, Sparkles } from 'lucide-react'
-import { store } from '../lib/api'
+import { api, store } from '../lib/api'
 
 export default function Layout() {
   const { pathname } = useLocation() // re-render on navigation so "My trip" appears after booking
   const currentTrip = store<string | null>('mz.trip', null)
+  const [waPaused, setWaPaused] = useState(false)
+  useEffect(() => {
+    api.config().then((c) => setWaPaused(!!c.whatsapp.paused)).catch(() => {})
+  }, [pathname])
   const nav = [
     { to: '/', label: 'Ride', icon: Car, end: true },
     ...(currentTrip ? [{ to: `/trip/${currentTrip}`, label: 'My trip', icon: Navigation, end: false }] : []),
     { to: '/assistant', label: 'Assistant', icon: Sparkles, end: false },
-    { to: '/whatsapp', label: 'WhatsApp', icon: MessageCircle, end: false },
+    { to: '/whatsapp', label: waPaused ? 'WhatsApp (off)' : 'WhatsApp', icon: MessageCircle, end: false },
     { to: '/dashboard', label: 'Fleet', icon: LayoutDashboard, end: false },
     { to: '/about', label: 'About', icon: Info, end: false },
   ]

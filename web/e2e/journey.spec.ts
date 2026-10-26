@@ -126,6 +126,24 @@ test("driver follows Waze's road: no false alarm; commute budget; Ask AI; instal
   await expect(page).toHaveURL(/\/assistant/)
 })
 
+test('operator switches WhatsApp off and on', async ({ page }) => {
+  page.on('dialog', (d) => d.accept())
+  await page.goto('/dashboard')
+  await page.getByPlaceholder('Team code').fill(TEAM_CODE)
+  await page.getByRole('button', { name: 'Open dashboard' }).click()
+  const sw = page.getByRole('switch', { name: 'WhatsApp channel' })
+  await expect(sw).toHaveAttribute('aria-checked', 'true')
+  await sw.click()
+  await expect(sw).toHaveAttribute('aria-checked', 'false')
+  await page.goto('/whatsapp')
+  await expect(page.getByText(/switched off by the operator/)).toBeVisible()
+  await page.goto('/')
+  await expect(page.getByPlaceholder('WhatsApp number')).toHaveCount(0)
+  await page.goto('/dashboard')
+  await page.getByRole('switch', { name: 'WhatsApp channel' }).click()
+  await expect(page.getByRole('switch', { name: 'WhatsApp channel' })).toHaveAttribute('aria-checked', 'true')
+})
+
 test('WhatsApp simulator: driver check and AI question', async ({ page }) => {
   await page.goto('/whatsapp')
   const box = page.getByPlaceholder('Message')

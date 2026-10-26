@@ -35,7 +35,9 @@ export default function WhatsAppPage() {
   }, [bubbles])
 
   // Pushed messages (check-in prompts, alerts) for this simulated chat.
+  const paused = !!config?.whatsapp.paused
   useEffect(() => {
+    if (paused) return
     const h = setInterval(async () => {
       try {
         const { messages } = await api.waOutbox(session)
@@ -45,10 +47,10 @@ export default function WhatsAppPage() {
       }
     }, 3000)
     return () => clearInterval(h)
-  }, [session])
+  }, [session, paused])
 
   async function send(text: string) {
-    if (!text.trim() || busy) return
+    if (!text.trim() || busy || paused) return
     const now = new Date().toISOString()
     setBubbles((b) => [...b, { from: 'me', text, at: now }])
     setInput('')
@@ -68,6 +70,11 @@ export default function WhatsAppPage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+      {paused && (
+        <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+          WhatsApp is switched off by the operator right now. Check-ins and alerts continue in the app; the simulator is paused.
+        </p>
+      )}
       <div className="space-y-4">
         <div className="rounded-3xl bg-gradient-to-br from-emerald-600 to-emerald-800 p-6 text-white">
           <h1 className="flex items-center gap-2 text-2xl font-extrabold">
@@ -163,7 +170,7 @@ export default function WhatsAppPage() {
             }}
           >
             <input className="flex-1 rounded-full border-0 bg-white px-4 py-2 text-sm outline-none" placeholder="Message" value={input} onChange={(e) => setInput(e.target.value)} />
-            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00a884] text-white disabled:opacity-50" disabled={busy || !input.trim()} aria-label="Send">
+            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00a884] text-white disabled:opacity-50" disabled={busy || paused || !input.trim()} aria-label="Send">
               <Send size={16} />
             </button>
           </form>

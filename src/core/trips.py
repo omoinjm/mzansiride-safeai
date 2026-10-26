@@ -27,22 +27,32 @@ def _code():
     return "MZ" + "".join(random.choice(CODE_ALPHABET) for _ in range(4))
 
 
-def get_ops_config():
-    """Operator settings (Fleet page). Only the check-in wait window for now."""
-    item = store.get("whatsapp", {"pk": "config#ops"}) or {}
-    return {"checkin_timeout_s": int(item.get("checkin_timeout_s") or CHECKIN_TIMEOUT_S)}
+def get_ops_config(fresh=False):
+    """Operator settings (Fleet page): the check-in wait window and the WhatsApp on/off switch."""
+    item = notify.ops_item(fresh)
+    return {"checkin_timeout_s": int(item.get("checkin_timeout_s") or CHECKIN_TIMEOUT_S),
+            "whatsapp_enabled": item.get("whatsapp_enabled") is not False}
 
 
 def set_ops_config(body):
-    try:
-        timeout = int(body.get("checkin_timeout_s"))
-    except (TypeError, ValueError):
-        raise BadRequest("checkin_timeout_s must be a number of seconds")
-    if not TIMEOUT_RANGE[0] <= timeout <= TIMEOUT_RANGE[1]:
-        raise BadRequest(f"checkin_timeout_s must be between {TIMEOUT_RANGE[0]} and {TIMEOUT_RANGE[1]}")
-    store.put("whatsapp", {"pk": "config#ops", "checkin_timeout_s": timeout, "updated_at": notify.now_iso()})
-    log("INFO", "ops_config", checkin_timeout_s=timeout)
-    return get_ops_config()
+    """Partial update: send only what changes, e.g. {"whatsapp_enabled": false}."""
+    item = {**notify.ops_item(fresh=True), **notify.OPS_KEY}
+    if "checkin_timeout_s" in body:
+        try:
+            timeout = int(body.get("checkin_timeout_s"))
+        except (TypeError, ValueError):
+            raise BadRequest("checkin_timeout_s must be a number of seconds")
+        if not TIMEOUT_RANGE[0] <= timeout <= TIMEOUT_RANGE[1]:
+            raise BadRequest(f"checkin_timeout_s must be between {TIMEOUT_RANGE[0]} and {TIMEOUT_RANGE[1]}")
+        item["checkin_timeout_s"] = timeout
+    if "whatsapp_enabled" in body:
+        if not isinstance(body["whatsapp_enabled"], bool):
+            raise BadRequest("whatsapp_enabled must be true or false")
+        item["whatsapp_enabled"] = body["whatsapp_enabled"]
+    item["updated_at"] = notify.now_iso()
+    store.put("whatsapp", item)
+    log("INFO", "ops_config", checkin_timeout_s=item.get("checkin_timeout_s"), whatsapp_enabled=item.get("whatsapp_enabled"))
+    return get_ops_config(fresh=True)
 
 
 def get_trip(trip_id):
@@ -131,6 +141,10 @@ def _link_passenger_whatsapp(trip, phone, sim_session):
     Real WhatsApp whenever the gateway is connected (the first message counts against the send limits);
     without it, messages go to the caller's in-browser WhatsApp simulator, or are recorded as simulated.
     """
+    if notify.whatsapp_paused():  # operator switched WhatsApp off: no link, no welcome
+        trip["whatsapp_channel"] = "paused"
+        store.put("trips", trip)
+        return
     if notify.contact_delivery(phone) == "whatsapp" and notify.take_send_quota(phone):
         chat, channel = f"{notify.msisdn(phone)}@c.us", "whatsapp"
     elif sim_session:
@@ -284,7 +298,9 @@ def telemetry(trip_id, tick):
 
 
 def queue_whatsapp_prompt(trip, ev):
-    """Send the check-in prompt (with an AI explanation) to the linked WhatsApp chat."""
+    """Send the check-in prompt to the linked WhatsApp chat (not while the operator has WhatsApp paused)."""
+    if notify.whatsapp_paused():
+        return
     chat = trip["wa_chat_id"]
     if chat.startswith("sim:"):
         # The simulator outbox resolves this marker lazily (see whatsapp_prompt_text), keeping telemetry fast.

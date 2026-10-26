@@ -451,7 +451,9 @@ function WhatsAppLink({ trip, config }: { trip: Trip; config: AppConfig | null }
   const link = digits ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : ''
   return (
     <Section title="Check-ins on WhatsApp" icon={<MessageCircle size={18} className="text-emerald-600" />} right={trip.whatsapp_linked ? <Pill status="resolved_ok" /> : undefined}>
-      {trip.whatsapp_linked ? (
+      {config?.whatsapp.paused ? (
+        <p className="text-sm text-amber-800">WhatsApp check-ins are paused by the operator. You'll get check-ins here in the app.</p>
+      ) : trip.whatsapp_linked ? (
         <p className="text-sm text-emerald-800">
           {trip.whatsapp_channel === 'whatsapp'
             ? `Linked to ${trip.passenger_phone ?? 'your WhatsApp'}. Check-ins arrive there automatically: reply 1 (safe) or 2 (help).`

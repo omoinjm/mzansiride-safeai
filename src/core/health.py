@@ -77,6 +77,10 @@ def _lambda_errors_last_hour():
 
 
 def _whatsapp_status(state, ping):
+    from . import notify
+
+    if notify.whatsapp_paused():
+        return "paused", "WhatsApp is switched off on the Fleet page."
     if not os.environ.get("WHATSAPP_FUNCTION"):
         return "not_configured", "WhatsApp isn't connected in this environment (the simulator is used)."
     if ping and not ping["ok"]:

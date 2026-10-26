@@ -41,6 +41,7 @@ def config(event, body):
     return {
         "whatsapp": {
             "enabled": notify.whatsapp_enabled(),
+            "paused": notify.whatsapp_paused(),
             "number": os.environ.get("WA_NUMBER", ""),
         },
         "model": assistant.MODEL_ID,
@@ -62,7 +63,17 @@ def assistant_chat(event, body):
     return assistant.chat(body["message"], trip=trip, history=body.get("history"), channel="web")
 
 
+class Paused(Exception):
+    pass
+
+
+def _require_whatsapp_on():
+    if notify.whatsapp_paused():
+        raise Paused("WhatsApp is paused by the operator")
+
+
 def wa_simulate(event, body):
+    _require_whatsapp_on()
     chat = "sim:" + re.sub(r"[^a-zA-Z0-9-]", "", str(body.get("session", "")))[:40]
     if chat == "sim:":
         raise trips.BadRequest("session is required")
@@ -71,6 +82,7 @@ def wa_simulate(event, body):
 
 
 def wa_outbox(event, body):
+    _require_whatsapp_on()
     qs = event.get("queryStringParameters") or {}
     chat = "sim:" + re.sub(r"[^a-zA-Z0-9-]", "", qs.get("session", ""))[:40]
     out = []
@@ -180,6 +192,9 @@ def handler(event, context):
     except trips.BadRequest as e:
         status = 400
         return _resp(400, {"error": str(e)})
+    except Paused as e:
+        status = 409
+        return _resp(409, {"error": str(e)})
     except PermissionError as e:
         status = 401
         return _resp(401, {"error": str(e)})

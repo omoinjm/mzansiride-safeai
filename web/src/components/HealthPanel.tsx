@@ -4,8 +4,8 @@ import { api } from '../lib/api'
 import type { Health } from '../lib/types'
 import { timeAgo } from '../lib/format'
 
-const DOT = { ok: 'bg-emerald-500', degraded: 'bg-amber-500', down: 'bg-red-500', not_configured: 'bg-slate-400' } as const
-const LABEL = { ok: 'OK', degraded: 'Degraded', down: 'Down', not_configured: 'Not connected' } as const
+const DOT = { ok: 'bg-emerald-500', degraded: 'bg-amber-500', down: 'bg-red-500', not_configured: 'bg-slate-400', paused: 'bg-slate-400' } as const
+const LABEL = { ok: 'OK', degraded: 'Degraded', down: 'Down', not_configured: 'Not connected', paused: 'Paused by operator' } as const
 
 /** System health for the operator: WhatsApp, AI, today's messages, recent errors. Counts only, no raw logs. */
 export default function HealthPanel({ code }: { code: string }) {

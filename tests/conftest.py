@@ -29,6 +29,7 @@ def aws(monkeypatch):
 
         from core import assistant, drivers, notify, store
         store._ddb = None
+        notify._ops_cache.clear()
         drivers._cache = None
         for d in drivers.SEED:
             store.put("drivers", d)

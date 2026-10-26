@@ -70,12 +70,37 @@ def contact_delivery(phone):
     return "whatsapp" if deliverable(phone) and whatsapp_enabled() else "simulated"
 
 
-def whatsapp_enabled():
+OPS_KEY = {"pk": "config#ops"}
+_ops_cache = {}  # {"item": dict, "at": epoch}; the switch is read at most every OPS_CACHE_S per Lambda container
+OPS_CACHE_S = 20
+
+
+def ops_item(fresh=False):
+    """The operator settings item (Fleet page): wait window, WhatsApp switch. Cached briefly."""
+    if fresh or time.time() - _ops_cache.get("at", 0) > OPS_CACHE_S:
+        _ops_cache.update(item=store.get("whatsapp", OPS_KEY) or {}, at=time.time())
+    return _ops_cache["item"]
+
+
+def whatsapp_paused():
+    """The operator switched WhatsApp off on the Fleet page: no WhatsApp sends, links, prompts or replies."""
+    return ops_item().get("whatsapp_enabled") is False
+
+
+def whatsapp_configured():
     return bool(os.environ.get("WHATSAPP_FUNCTION"))
+
+
+def whatsapp_enabled():
+    """Real WhatsApp can be used: the gateway is configured and the operator hasn't paused it."""
+    return whatsapp_configured() and not whatsapp_paused()
 
 
 def send_whatsapp(chat_id, text):
     """Queue a WhatsApp message. Returns a delivery status string."""
+    if whatsapp_paused():
+        log("INFO", "whatsapp_paused", chat=mask(chat_id))
+        return "paused"
     if chat_id.startswith("sim:"):
         _sim_outbox_append(chat_id, text)
         return "delivered_simulator"
@@ -149,12 +174,15 @@ def notify_trusted_contact(trip, event, reason):
     }
     if not phone:
         record.update(channel="none", status="no_contact_set")
+    elif whatsapp_paused():
+        record.update(channel="whatsapp", status="paused")
     elif contact_delivery(phone) == "whatsapp":
         status = send_whatsapp(f"{msisdn(phone)}@c.us", text) if take_send_quota(phone) else "rate_limited"
         record.update(channel="whatsapp", status=status)
     else:
         record.update(channel="whatsapp", status="simulated")
-    kind = {"simulated": "simulated", "rate_limited": "rate_limited", "no_contact_set": "none"}.get(record["status"], "whatsapp")
+    kind = {"simulated": "simulated", "rate_limited": "rate_limited", "no_contact_set": "none",
+            "paused": "paused"}.get(record["status"], "whatsapp")
     health.record({f"contact_{kind}": 1})
     log("INFO", "contact_notified", trip=trip["trip_id"], reason=reason, status=record["status"],
         channel=record["channel"])

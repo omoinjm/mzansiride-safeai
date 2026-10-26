@@ -19,12 +19,14 @@ export default function BookPage() {
   const [contactName, setContactName] = useState(store('mz.contactName', ''))
   const [contactPhone, setContactPhone] = useState(store('mz.contactPhone', ''))
   const [waPhone, setWaPhone] = useState(store('mz.waPhone', ''))
+  const [waPaused, setWaPaused] = useState(false)
   const [safe, setSafe] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     api.places().then(setPlaces).catch((e) => setError(e.message))
+    api.config().then((c) => setWaPaused(!!c.whatsapp.paused)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -53,8 +55,8 @@ export default function BookPage() {
         riders,
         safe_mode: safe,
         trusted_contact: contactPhone ? { name: contactName, phone: contactPhone } : undefined,
-        passenger_phone: waPhone || undefined,
-        wa_session: waPhone ? waSession() : undefined,
+        passenger_phone: (!waPaused && waPhone) || undefined,
+        wa_session: !waPaused && waPhone ? waSession() : undefined,
       })
       save('mz.trip', trip.trip_id)
       nav(`/trip/${trip.trip_id}`)
@@ -170,15 +172,19 @@ export default function BookPage() {
             <span className="label">Your name</span>
             <input className="input" placeholder="e.g. Thandi" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
-          <label className="block">
-            <span className="label flex items-center gap-1">
-              <MessageCircle size={13} className="text-emerald-600" /> Your WhatsApp
-            </span>
-            <input className="input" placeholder="WhatsApp number" inputMode="tel" value={waPhone} onChange={(e) => setWaPhone(e.target.value)} />
-          </label>
+          {!waPaused && (
+            <label className="block">
+              <span className="label flex items-center gap-1">
+                <MessageCircle size={13} className="text-emerald-600" /> Your WhatsApp
+              </span>
+              <input className="input" placeholder="WhatsApp number" inputMode="tel" value={waPhone} onChange={(e) => setWaPhone(e.target.value)} />
+            </label>
+          )}
         </div>
         <p className="-mt-2 text-[11px] text-slate-500">
-          Optional: we'll check in on WhatsApp if the trip looks unusual. Messages come from our prototype number.
+          {waPaused
+            ? 'WhatsApp check-ins are paused right now: you will get check-ins in the app.'
+            : "Optional: we'll check in on WhatsApp if the trip looks unusual. Messages come from our prototype number."}
         </p>
 
         <div className="rounded-xl border border-slate-200 p-3">

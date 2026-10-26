@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { Activity, Bell, Car, CirclePlay, CircleStop, Lock, MessageCircle, Phone, RefreshCw, ShieldAlert, ShieldCheck, Siren, Sparkles, Timer } from 'lucide-react'
 import { api, save, store } from '../lib/api'
 import { FleetDemo } from '../lib/fleet'
-import type { Dashboard, FleetRow, Risk, SafetyEvent } from '../lib/types'
+import type { Dashboard, FleetRow, OpsConfig, Risk, SafetyEvent } from '../lib/types'
 import FleetMap from '../components/FleetMap'
 import HealthPanel from '../components/HealthPanel'
 import { Pill, Section, SimBadge, Spinner } from '../components/ui'
@@ -21,14 +21,20 @@ export default function DashboardPage() {
   const demo = useRef(new FleetDemo())
   const [demoRunning, setDemoRunning] = useState(false)
   const [demoLog, setDemoLog] = useState<string[]>([])
-  const [waitS, setWaitS] = useState<number | null>(null)
+  const [ops, setOps] = useState<OpsConfig | null>(null)
+  const waitS = ops?.checkin_timeout_s ?? null
 
   useEffect(() => {
-    if (code) api.opsConfig(code).then((c) => setWaitS(c.checkin_timeout_s)).catch(() => {})
+    if (code) api.opsConfig(code).then(setOps).catch(() => {})
   }, [code])
 
   async function changeWait(s: number) {
-    setWaitS((await api.opsConfig(code, s)).checkin_timeout_s)
+    setOps(await api.opsConfig(code, { checkin_timeout_s: s }))
+  }
+
+  async function toggleWhatsApp(on: boolean) {
+    if (!on && !window.confirm('Switch WhatsApp off? No WhatsApp check-ins, alerts or replies will be sent until you switch it back on.')) return
+    setOps(await api.opsConfig(code, { whatsapp_enabled: on }))
   }
 
   const load = useCallback(async () => {
@@ -148,6 +154,27 @@ export default function DashboardPage() {
         </select>
         <span className="text-xs text-slate-500">
           No answer: a reminder at half the window, then the trusted contact and this dashboard are alerted. Trip time; the simulator runs faster.
+        </span>
+      </div>
+
+      <div className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-2 text-sm ${ops?.whatsapp_enabled === false ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}>
+        <MessageCircle size={16} className="text-emerald-600" />
+        <span className="font-semibold">WhatsApp channel</span>
+        <button
+          role="switch"
+          aria-checked={ops?.whatsapp_enabled ?? true}
+          aria-label="WhatsApp channel"
+          disabled={!ops}
+          onClick={() => ops && toggleWhatsApp(!ops.whatsapp_enabled)}
+          className={`relative h-7 w-12 rounded-full transition ${ops?.whatsapp_enabled === false ? 'bg-slate-300' : 'bg-emerald-500'}`}
+        >
+          <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${ops?.whatsapp_enabled === false ? 'left-1' : 'left-6'}`} />
+        </button>
+        <span className="font-semibold">{ops?.whatsapp_enabled === false ? 'Off' : 'On'}</span>
+        <span className="text-xs text-slate-500">
+          {ops?.whatsapp_enabled === false
+            ? 'Paused: no WhatsApp check-ins, alerts or replies (people who message the bot get one "paused" reply an hour). The app keeps working.'
+            : 'Check-ins, trusted-contact alerts and the WhatsApp assistant are live.'}
         </span>
       </div>
 

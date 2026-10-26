@@ -145,17 +145,19 @@ export type DriverLookup = {
 }
 
 export type AppConfig = {
-  whatsapp: { enabled: boolean; number: string }
+  whatsapp: { enabled: boolean; paused?: boolean; number: string }
   model: string
   guardrail: boolean
   checkin_timeout_s: number
   region: string
 }
 
+export type OpsConfig = { checkin_timeout_s: number; whatsapp_enabled: boolean }
+
 export type Health = {
   checked_at: string
   whatsapp: {
-    status: 'ok' | 'degraded' | 'down' | 'not_configured'
+    status: 'ok' | 'degraded' | 'down' | 'not_configured' | 'paused'
     advice: string
     gateway: { ok: boolean; ms: number | null } | null
     last_sent_at?: string

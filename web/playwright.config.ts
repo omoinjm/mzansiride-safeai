@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 // E2E_URL=https://xxxx.cloudfront.net npx playwright test   (default: `make local` on :8077)
 export default defineConfig({
+  workers: 1, // tests share one backend, and the WhatsApp switch test changes a global setting
   testDir: './e2e',
   timeout: 180_000,
   retries: 0,

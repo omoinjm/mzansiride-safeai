@@ -98,7 +98,7 @@ def test_whatsapp_danger_escalates_without_ai(aws, monkeypatch):
 def test_ops_config_needs_team_code_and_validates(aws):
     assert call("GET", "/api/ops/config")[0] == 401
     assert call("PUT", "/api/ops/config", {"checkin_timeout_s": 30}, headers=CODE)[0] == 400
-    assert call("PUT", "/api/ops/config", {"checkin_timeout_s": 300}, headers=CODE)[1] == {"checkin_timeout_s": 300}
+    assert call("PUT", "/api/ops/config", {"checkin_timeout_s": 300}, headers=CODE)[1] == {"checkin_timeout_s": 300, "whatsapp_enabled": True}
     assert call("GET", "/api/config")[1]["checkin_timeout_s"] == 300
 
 
