@@ -123,4 +123,53 @@ def snapshot():
         },
         "errors_last_hour": _lambda_errors_last_hour(),
         "dashboard_url": os.environ.get("DASHBOARD_URL"),
+        "email_alerts": _email_alerts(),
     }
+
+
+# ---------- scheduled check -> CloudWatch metrics -> alarms -> email (infra/monitoring.tf) ----------
+
+NAMESPACE = "MzansiRide/Health"
+
+
+def _recent(ts):
+    return bool(ts) and ts >= time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - RECENT_S))
+
+
+def check_and_publish():
+    """Runs every 5 minutes (EventBridge). 1 = healthy, 0 = needs attention. A paused WhatsApp is healthy."""
+    snap = snapshot()
+    state = store.get("whatsapp", {"pk": STATE}) or {}
+    metrics = {
+        "WhatsAppHealthy": 0 if snap["whatsapp"]["status"] in ("down", "degraded") else 1,
+        "AIHealthy": 1 if snap["ai"]["status"] == "ok" else 0,
+        "SmsHealthy": 0 if _recent(state.get("sms_last_error_at")) else 1,
+        "HealthCheckRan": 1,
+    }
+    try:
+        import boto3
+
+        boto3.client("cloudwatch").put_metric_data(
+            Namespace=NAMESPACE, MetricData=[{"MetricName": k, "Value": v, "Unit": "Count"} for k, v in metrics.items()])
+    except Exception as e:
+        log("ERROR", "health_publish_failed", error=str(e)[:200])
+        raise  # surfaces as a Lambda error, which has its own alarm
+    log("INFO", "health_check", **metrics)
+    return metrics
+
+
+def _email_alerts():
+    """How many team emails will get alerts (counts only)."""
+    arn = os.environ.get("OPS_TOPIC_ARN")
+    if not arn:
+        return None
+    try:
+        import boto3
+
+        subs = boto3.client("sns").list_subscriptions_by_topic(TopicArn=arn)["Subscriptions"]
+        emails = [s for s in subs if s["Protocol"] == "email"]
+        pending = sum(1 for s in emails if s["SubscriptionArn"] == "PendingConfirmation")
+        return {"confirmed": len(emails) - pending, "pending": pending}
+    except Exception as e:
+        log("WARN", "health_alerts_failed", error=str(e)[:200])
+        return None

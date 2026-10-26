@@ -81,3 +81,10 @@ variable "enable_sms" {
   type        = bool
   default     = true
 }
+
+variable "admin_emails" {
+  description = "Team emails that get system-down alerts (and, with Cognito, operator sign-in). Private: tfvars or the ADMIN_EMAILS secret."
+  type        = list(string)
+  default     = []
+  sensitive   = true
+}

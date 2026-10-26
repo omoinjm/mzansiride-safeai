@@ -32,6 +32,7 @@ locals {
     OPENWA_HEALTH_URL = var.enable_whatsapp ? "https://${local.wa_host}/api/health" : ""
     DASHBOARD_URL     = local.dashboard_url
     SMS_ENABLED       = tostring(var.enable_sms)
+    OPS_TOPIC_ARN     = aws_sns_topic.ops_alerts.arn
   }
 }
 

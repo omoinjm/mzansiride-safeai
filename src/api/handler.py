@@ -173,6 +173,8 @@ ROUTES = [
 
 
 def handler(event, context):
+    if event.get("action") == "health_check":  # EventBridge schedule, not HTTP
+        return health.check_and_publish()
     started = time.time()
     method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
     path = event.get("rawPath", "/")

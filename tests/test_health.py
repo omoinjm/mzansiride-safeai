@@ -58,3 +58,26 @@ def test_unknown_number_is_not_a_gateway_failure(aws, monkeypatch):
     handler.handler({"action": "send", "chat_id": "27820000000@c.us", "text": "hi"}, None)  # no exception
     m = call("GET", "/api/ops/health", headers=CODE)[1]["messages_today"]
     assert m["whatsapp_undeliverable"] == 1 and m["whatsapp_failed"] == 0
+
+
+def test_scheduled_check_publishes_metrics(aws, monkeypatch):
+    from api import handler
+    sent = []
+
+    class FakeCw:
+        def put_metric_data(self, **kw):
+            sent.append(kw)
+    import boto3
+    monkeypatch.setattr(boto3, "client", lambda name, **kw: FakeCw())
+    m = handler.handler({"action": "health_check"}, None)
+    assert m == {"WhatsAppHealthy": 1, "AIHealthy": 1, "SmsHealthy": 1, "HealthCheckRan": 1}
+    assert sent[0]["Namespace"] == "MzansiRide/Health" and len(sent[0]["MetricData"]) == 4
+
+    import time
+    health.record(sms_last_error_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    monkeypatch.setenv("WHATSAPP_FUNCTION", "wa-fn")
+    health.record(wa_last_error_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    m = handler.handler({"action": "health_check"}, None)
+    assert m["SmsHealthy"] == 0 and m["WhatsAppHealthy"] == 0
+    call("PUT", "/api/ops/config", {"whatsapp_enabled": False}, headers=CODE)  # paused is not an outage
+    assert handler.handler({"action": "health_check"}, None)["WhatsAppHealthy"] == 1

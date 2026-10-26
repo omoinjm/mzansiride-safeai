@@ -78,6 +78,11 @@ export default function HealthPanel({ code }: { code: string }) {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="font-bold">System health</h2>
         <span className="text-xs text-slate-500">checked {timeAgo(h.checked_at)} · refreshes every 15 s</span>
+        {h.email_alerts && (
+          <span className={`text-xs font-semibold ${h.email_alerts.pending ? 'text-amber-700' : 'text-slate-600'}`}>
+            · Email alerts: {h.email_alerts.confirmed} confirmed{h.email_alerts.pending ? `, ${h.email_alerts.pending} awaiting confirmation` : ''}
+          </span>
+        )}
         {h.dashboard_url && (
           <a href={h.dashboard_url} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
             Logs and alarms in CloudWatch <ExternalLink size={12} />

@@ -183,6 +183,7 @@ export type Health = {
   >
   errors_last_hour: { api?: number; whatsapp?: number } | null
   dashboard_url?: string
+  email_alerts?: { confirmed: number; pending: number } | null
 }
 
 export type Dashboard = {

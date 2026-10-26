@@ -73,6 +73,24 @@ data "aws_iam_policy_document" "api" {
     resources = ["*"]
   }
 
+  # Scheduled health check publishes MzansiRide/Health metrics (alarms -> team email).
+  statement {
+    sid       = "PublishHealthMetrics"
+    actions   = ["cloudwatch:PutMetricData"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "cloudwatch:namespace"
+      values   = ["MzansiRide/Health"]
+    }
+  }
+
+  statement {
+    sid       = "CountAlertSubscriptions"
+    actions   = ["sns:ListSubscriptionsByTopic"]
+    resources = [aws_sns_topic.ops_alerts.arn]
+  }
+
   statement {
     sid       = "Logs"
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
