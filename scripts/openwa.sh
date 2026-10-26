@@ -10,7 +10,7 @@
 #   ./scripts/openwa.sh dashboard  SSM port-forward: OpenWA dashboard on http://localhost:2785 (never public)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-REGION="${REGION:-eu-west-1}"
+REGION="${REGION:-$(sed -n 's/^region *= *"\(.*\)"/\1/p' infra/backend.hcl)}"
 TF="terraform -chdir=infra"
 INSTANCE="$($TF output -raw openwa_instance_id)"
 PREFIX="$($TF output -raw openwa_param_prefix)"

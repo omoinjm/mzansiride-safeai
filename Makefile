@@ -2,9 +2,10 @@
 CREDS := eval "$$(aws configure export-credentials --format env 2>/dev/null)";
 TF   := $(CREDS) terraform -chdir=infra
 PY   := .venv/bin/python
-REGION := eu-west-1
+# The active AWS target (account + region) is whatever infra/backend.hcl points at (scripts/switch_account.sh).
+REGION ?= $(shell sed -n 's/^region *= *"\(.*\)"/\1/p' infra/backend.hcl)
 
-.PHONY: help setup test web lint e2e local local-ai init plan deploy site url code logs logs-wa wa-setup wa-qr wa-status wa-dashboard wa-restart wa-send destroy
+.PHONY: help setup test web lint e2e local local-ai init plan deploy site url code logs logs-wa wa-setup wa-qr wa-status wa-dashboard wa-restart wa-send switch destroy
 
 help:
 	@echo "setup      .venv + web/node_modules"
@@ -19,6 +20,7 @@ help:
 	@echo "wa-send    TO=0821234567 [MSG='...']: send a test WhatsApp message through the real path"
 	@echo "wa-dashboard  private tunnel to the OpenWA dashboard on http://localhost:2785 (scan the QR there)"
 	@echo "logs       tail API logs   logs-wa  tail WhatsApp logs"
+	@echo "switch     REGION_TO=us-east-1 [ARGS='--check|--old-profile default|--ci']: move the stack to the account you're logged into"
 	@echo "destroy    tear everything down"
 
 setup:
@@ -45,7 +47,7 @@ local-ai: web
 	$(CREDS) $(PY) scripts/local_server.py --bedrock
 
 init:
-	$(TF) init -backend-config=backend.hcl
+	$(TF) init -reconfigure -backend-config=backend.hcl
 
 plan:
 	$(TF) plan -out=tfplan
@@ -90,6 +92,9 @@ wa-dashboard:
 
 wa-restart:
 	$(CREDS) ./scripts/openwa.sh restart
+
+switch:
+	./scripts/switch_account.sh --region "$(or $(REGION_TO),$(REGION))" $(ARGS)
 
 wa-send:
 	$(CREDS) ./scripts/openwa.sh send "$(TO)" "$(MSG)"

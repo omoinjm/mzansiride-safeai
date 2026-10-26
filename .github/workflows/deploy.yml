@@ -59,6 +59,8 @@ jobs:
         with:
           terraform_version: 1.11.4
           terraform_wrapper: false
+      - name: Target region (from infra/backend.hcl)
+        run: echo "AWS_REGION=$(sed -n 's/^region *= *"\(.*\)"/\1/p' infra/backend.hcl)" >> "$GITHUB_ENV"
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}

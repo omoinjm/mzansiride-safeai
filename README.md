@@ -202,6 +202,33 @@ make logs-wa                  # tail the WhatsApp Lambda logs if it still fails
   (http://localhost:2785) so you can see the session; as a last resort, re-link with `make wa-qr`.
 - During a demo, the **WhatsApp simulator** page runs the same backend logic and is the fallback.
 
+### Moving to another AWS account (e.g. the hackathon sandbox)
+One script redeploys everything into whichever account you're logged into and makes it the active target
+(`infra/backend.hcl` + `infra/target.auto.tfvars`; `make`, the WhatsApp scripts and CI all follow them).
+
+```bash
+export AWS_PROFILE=sandbox            # or paste the sandbox's AWS_ACCESS_KEY_ID / SECRET / SESSION_TOKEN
+make switch REGION_TO=us-east-1 ARGS=--check                      # preflight: account, region, Bedrock models. Changes nothing
+make switch REGION_TO=us-east-1 ARGS="--old-profile default"      # full switch (~15 min), stops the old WhatsApp gateway
+make switch REGION_TO=us-east-1 ARGS="--old-profile default --ci" # ...and point GitHub deploys at the new account
+```
+
+What it does:
+1. Confirms the target account and region.
+2. Tests which Bedrock models answer: Claude Haiku 5.5 preferred, Nova Lite as fallback.
+3. Creates the Terraform state bucket.
+4. Runs `make deploy`.
+5. Smoke-tests the site and sets the check-in wait window to 5 minutes.
+6. Waits for the new WhatsApp gateway, registers it and fetches the QR code.
+7. With `--old-profile`, stops the old gateway so two gateways don't both answer.
+8. With `--ci`, re-points GitHub deploys.
+
+Afterwards:
+- **Scan the QR code** with the bot phone (`make wa-dashboard` shows a fresh one), then `make wa-send TO=<your number>`.
+- **New URL and Fleet code.** Both are printed at the end. The new DynamoDB starts empty; the driver registry is re-seeded.
+- **Switching back** is the same command, run with the old profile and region (the old state bucket is reused).
+- **Without `--ci`, don't push** `infra/backend.hcl` or `infra/target.auto.tfvars`, or CI deploys to the wrong account.
+
 ### Continuous deployment
 Every push to `main` runs `.github/workflows/deploy.yml`: pytest + typecheck + lint + build → `terraform plan -out` → apply
 that plan → publish the SPA → smoke-test the live URL. PRs run the tests only. One-time: `./scripts/bootstrap_ci.sh`
