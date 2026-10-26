@@ -96,8 +96,11 @@ cat > infra/target.auto.tfvars <<EOF
 region            = "$REGION"
 model_id          = "$PRIMARY"
 model_fallback_id = "$FALLBACK"
+# SMS stays simulated until AWS End User Messaging SMS is enabled for this account (then: true, and
+# make sms-verify NUMBER=... while the account is in the SMS sandbox).
+enable_sms        = false
 EOF
-cat infra/target.auto.tfvars | tail -3
+grep -v '^#' infra/target.auto.tfvars
 
 # ---------- 4. deploy ----------
 step "4/8 Deploy (tests, terraform plan + apply, site upload): about 10 minutes on a new account"

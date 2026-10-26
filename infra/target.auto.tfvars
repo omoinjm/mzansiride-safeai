@@ -3,3 +3,6 @@
 region            = "eu-west-1"
 model_id          = "eu.anthropic.claude-haiku-5-5"
 model_fallback_id = "eu.amazon.nova-lite-v1:0"
+# SMS stays simulated until AWS End User Messaging SMS is enabled for this account (then: true, and
+# make sms-verify NUMBER=... while the account is in the SMS sandbox).
+enable_sms        = false
