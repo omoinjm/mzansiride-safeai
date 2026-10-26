@@ -69,6 +69,14 @@ jobs:
       - name: Terraform init
         run: terraform -chdir=infra init -input=false -backend-config=backend.hcl
 
+      - name: Forget resources that were dropped from the config
+        # aws_sns_sms_preferences can't be read in this account (no End User Messaging subscription), so a
+        # normal plan can't refresh it to destroy it. Forgetting it leaves the account's SMS settings as they are.
+        run: |
+          for r in 'aws_sns_sms_preferences.sms[0]'; do
+            terraform -chdir=infra state list | grep -qxF "$r" && terraform -chdir=infra state rm "$r" || true
+          done
+
       - name: Terraform plan
         env:
           # Demo WhatsApp numbers live in repo secrets, never in the code (infra/terraform.tfvars locally).

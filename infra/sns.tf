@@ -1,11 +1,8 @@
 # Amazon SNS: SMS to the trusted contact (one message per SOS / "I need help"), and the ops alert topic
 # (email to the team when something is down, see monitoring.tf).
 
-resource "aws_sns_sms_preferences" "sms" {
-  count             = var.enable_sms ? 1 : 0
-  default_sms_type  = "Transactional" # time-critical: delivered ahead of promotional traffic
-  default_sender_id = "MzansiRide"    # shown where the destination country supports alphanumeric sender IDs
-}
+# SMS type (Transactional) and sender ID are set per message in core/notify.send_sms. No account-wide
+# aws_sns_sms_preferences: reading them needs an End User Messaging subscription that this account lacks.
 
 # Email alerts for the team: CloudWatch alarms (monitoring.tf) publish here. Each address confirms once.
 resource "aws_sns_topic" "ops_alerts" {
