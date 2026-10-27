@@ -286,7 +286,7 @@ Read from this while presenting. It follows the deck slide by slide
 
 `Nhlanhla · 18:15 · about 40 seconds`
 
-> **“We set ourselves six things to finish before Tuesday. All six are built and in today’s demo: the app is mobile friendly and can be installed on a phone; the AI assistant button is on every page; fares show weekly and monthly totals; the full no-reply workflow runs with an operator-set wait window; and the driver’s Face ID check shows at the start of each ride, simulated for noAnd operators now sign in with Amazon Cognito, so only the operator’s safety team can open the fleet dashboard.”d.”**
+> **“We set ourselves six things to finish before Tuesday. All six are built and in today’s demo: the app is mobile friendly and can be installed on a phone; the AI assistant button is on every page; fares show weekly and monthly totals; the full no-reply workflow runs with an operator-set wait window; and the driver’s Face ID check shows at the start of each ride, simulated for now. And operators now sign in with Amazon Cognito, so only the operator’s safety team can open the fleet dashboard.”**
 
 ---
 
