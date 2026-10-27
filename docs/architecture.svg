@@ -59,7 +59,7 @@
   <rect x="560" y="130" width="220" height="76" class="box" stroke="#8C4FFF"/>
   <text x="576" y="160" class="t">API Gateway (HTTP)</text>
   <text x="576" y="180" class="s">/api/* · /whatsapp/webhook</text>
-  <text x="576" y="196" class="s">throttled 25 rps</text>
+  <text x="576" y="196" class="s">throttled 100 rps</text>
 
   <!-- OpenWA -->
   <rect x="290" y="380" width="230" height="110" class="box" stroke="#ED7100"/>

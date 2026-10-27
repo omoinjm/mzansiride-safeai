@@ -40,10 +40,11 @@ resource "aws_apigatewayv2_stage" "default" {
   name        = "$default"
   auto_deploy = true
 
-  # Caps Bedrock spend and abuse: telemetry is ~1 req/s per active demo trip.
+  # Caps Bedrock spend and abuse: telemetry is ~1 req/s per active demo trip, so 100/s leaves room for a room full
+  # of people trying it during the live demo. Per-number WhatsApp/SMS send limits are separate (core/notify.py).
   default_route_settings {
-    throttling_rate_limit  = 25
-    throttling_burst_limit = 50
+    throttling_rate_limit  = 100
+    throttling_burst_limit = 200
   }
 
   access_log_settings {

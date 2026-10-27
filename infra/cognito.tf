@@ -77,9 +77,9 @@ resource "aws_cognito_user_in_group" "operator" {
 
 # API Gateway checks the Cognito ID token on operator routes before the Lambda runs.
 resource "aws_apigatewayv2_authorizer" "operators" {
-  api_id           = aws_apigatewayv2_api.main.id
-  authorizer_type  = "JWT"
-  name             = "${var.name}-operators"
+  api_id          = aws_apigatewayv2_api.main.id
+  authorizer_type = "JWT"
+  name            = "${var.name}-operators"
   # Not Authorization: CloudFront strips that header from GET requests unless it's part of the cache key.
   identity_sources = ["$request.header.x-operator-token"]
   jwt_configuration {

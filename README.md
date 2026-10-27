@@ -106,7 +106,7 @@ Solid = implemented · dashed orange = simulated in the prototype · dashed grey
 | Service | Role in the prototype |
 |---|---|
 | **Amazon CloudFront + S3** | Serves the React SPA over HTTPS from the Johannesburg and Cape Town edges. The bucket is private (OAC). `/api/*` is forwarded to API Gateway, so the page and API share one origin (no CORS). |
-| **Amazon API Gateway (HTTP API)** | `ANY /api/{proxy+}` → `api` Lambda. `POST /whatsapp/webhook` → `whatsapp` Lambda. Throttled to 25 rps (burst 50). |
+| **Amazon API Gateway (HTTP API)** | `ANY /api/{proxy+}` → `api` Lambda. `POST /whatsapp/webhook` → `whatsapp` Lambda. Throttled to 100 rps (burst 200). |
 | **AWS Lambda `api`** (Python 3.13, arm64) | Trips, **safety rules engine**, check-ins, escalation, trusted-contact notifications, assistant, dashboard. |
 | **AWS Lambda `whatsapp`** | Verifies the OpenWA HMAC signature, deduplicates, and acknowledges at once. It then processes asynchronously (it invokes itself) and replies through OpenWA. |
 | **Amazon Bedrock** (Claude Haiku 5.5, EU inference profile; Amazon Nova Lite as fallback model) | Explains alerts and answers safety questions (Converse API), grounded in [`src/core/guidance.md`](src/core/guidance.md). If Claude is refused (e.g. model access not granted), Nova Lite answers instead. |

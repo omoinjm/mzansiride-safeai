@@ -5,7 +5,7 @@ Read from this while presenting. It follows the deck slide by slide
 **Bold quotes are what you say.** *Italic lines are cues, not to be read aloud.* Times are when the slide starts.
 
 **Presenters:** Magala (problem, solution, AI, close) · Nhlanhla (architecture, frontend, AWS, live demo, outstanding work).
-**Length:** about 20 minutes, then questions. Hard questions and answers: [`aws-services-qa.md`](aws-services-qa.md).
+**Length:** about 22 minutes, then questions. Hard questions and answers: [`aws-services-qa.md`](aws-services-qa.md).
 
 ## Before you start (10 minutes before)
 
@@ -42,19 +42,21 @@ Read from this while presenting. It follows the deck slide by slide
 | 11 | Magala | 5:55 | Know your driver before you get in |
 | 12 | Magala | 6:35 | Safer and cheaper |
 | 13 | Nhlanhla | 7:15 | How we built it on AWS |
-| 14 | Nhlanhla | 8:30 | Built to be responsible |
-| 15 | Nhlanhla | 9:00 | Request a ride, see the saving |
-| 16 | Nhlanhla | 9:30 | Safe Journey Mode in action |
-| 17 | Nhlanhla | 10:00 | Every trip leaves a record |
-| 18 | Nhlanhla | 10:30 | What the operator sees |
-| 19 | Magala | 11:10 | What the AI does, and doesn’t |
-| 20 | Magala | 12:40 | The AI assistant in action |
-| 21 | Nhlanhla | 13:20 | Why each AWS service |
-| 22 | Nhlanhla | 14:20 | Live demo: the main user journey |
-| 23 | Nhlanhla | 17:35 | Working, simulated and still to come |
-| 24 | Nhlanhla | 18:15 | Outstanding work |
-| 25 | Nhlanhla | 18:55 | Expected impact |
-| 26 | Magala | 19:25 | Safety shouldn’t depend on a button |
+| 14 | Nhlanhla | 8:30 | The full architecture |
+| 15 | Nhlanhla | 9:15 | Built to be responsible |
+| 16 | Nhlanhla | 9:45 | Request a ride, see the saving |
+| 17 | Nhlanhla | 10:15 | Safe Journey Mode in action |
+| 18 | Nhlanhla | 10:45 | Every trip leaves a record |
+| 19 | Nhlanhla | 11:15 | What the operator sees |
+| 20 | Magala | 11:55 | What the AI does, and doesn’t |
+| 21 | Magala | 13:25 | The AI assistant in action |
+| 22 | Nhlanhla | 14:05 | Why each AWS service |
+| 23 | Nhlanhla | 15:05 | Live demo: the main user journey |
+| 24 | Nhlanhla | 18:20 | Try it yourself |
+| 25 | Nhlanhla | 19:20 | Working, simulated and still to come |
+| 26 | Nhlanhla | 20:00 | Outstanding work |
+| 27 | Nhlanhla | 20:40 | Expected impact |
+| 28 | Magala | 21:10 | Safety shouldn’t depend on a button |
 
 ---
 
@@ -182,41 +184,51 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 14 · Built to be responsible
+## Slide 14 · The full architecture
 
-`Nhlanhla · 8:30 · about 30 seconds`
+`Nhlanhla · 8:30 · about 45 seconds`
+
+> **“Here is the full picture, following one alert with the numbers. One: the passenger opens the app from CloudFront, which serves it from Johannesburg and Cape Town. Two: API calls go through API Gateway to the api Lambda. Three: the rules flag a stop or a deviation and store the event in DynamoDB. Four: Bedrock explains it, and writes the operator's triage line if it escalates. Five and six: WhatsApp messages arrive through our OpenWA gateway on EC2, and check-ins, replies and the trusted-contact alert go back out the same way. Around that: operators sign in with Cognito, SNS emails us when something is down, secrets are in SSM, and everything is logged in CloudWatch. Orange dashed is simulated, the journey replay. Grey dashed is planned, Amazon Location Service for live GPS.”**
+
+*Cue: point at each number as you say it. Don't read the box labels.*
+
+---
+
+## Slide 15 · Built to be responsible
+
+`Nhlanhla · 9:15 · about 30 seconds`
 
 > **“Security and privacy are designed in. We use simulated data only, so no real location data is collected. An unusual event is a prompt to check in, never proof of wrongdoing. The AI works only from approved safety information, and it is clearly not an emergency service: in danger, call 10111 or 112. We store minimal data, control access at the backend, and keep credentials out of the frontend. We’ve designed with POPIA in mind, and a production version would need a formal assessment.”**
 
 ---
 
-## Slide 15 · Request a ride, see the saving
+## Slide 16 · Request a ride, see the saving
 
-`Nhlanhla · 9:00 · about 30 seconds`
+`Nhlanhla · 9:45 · about 30 seconds`
 
 > **“This is the working frontend. The passenger chooses a pickup and destination from predefined Johannesburg locations on real road routes, and sees the individual fare, R67.50 for this trip, next to the shared options: R40.50 with two riders and R27.00 with three. It’s marked simulated, and the fares are illustrative.”**
 
 ---
 
-## Slide 16 · Safe Journey Mode in action
+## Slide 17 · Safe Journey Mode in action
 
-`Nhlanhla · 9:30 · about 30 seconds`
+`Nhlanhla · 10:15 · about 30 seconds`
 
 > **“Once the trip starts, Safe Journey Mode is on and watching for unusual stops and route changes. The passenger can see her trusted contact, share her trip, or send an SOS in one tap. The page says plainly what is real and what is simulated: WhatsApp alerts to the trusted contact are real, and the SMS is labelled simulated, so nothing here is hidden.”**
 
 ---
 
-## Slide 17 · Every trip leaves a record
+## Slide 18 · Every trip leaves a record
 
-`Nhlanhla · 10:00 · about 30 seconds`
+`Nhlanhla · 10:45 · about 30 seconds`
 
 > **“When the trip ends, the summary shows the fare, the distance and the number of safety alerts, plus what sharing would have saved, about R27 on this trip. Below it, the safety log is stored in DynamoDB. On the right, the driver card says ‘demo driver, not verified’ and tells the passenger to check the plate, the car and the driver before getting in.”**
 
 ---
 
-## Slide 18 · What the operator sees
+## Slide 19 · What the operator sees
 
-`Nhlanhla · 10:30 · about 40 seconds`
+`Nhlanhla · 11:15 · about 40 seconds`
 
 > **“This is what the operator sees. Most trips are green. The one that needs attention turns red, with the AI’s one-line next step: stopped off-route, passenger unresponsive on WhatsApp, request an immediate driver voice call. Operators get live status, a clear next step instead of a raw alert, and a full record of every alert and response.”**
 
@@ -228,9 +240,9 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 19 · What the AI does, and doesn’t
+## Slide 20 · What the AI does, and doesn’t
 
-`Magala · 11:10 · about 90 seconds`
+`Magala · 11:55 · about 90 seconds`
 
 > **“Thanks, Nhlanhla. Now the AI, and just as importantly, how we don’t use it. We made one deliberate decision: detection and intelligence are separate. Detection is rule-based. Deterministic rules decide whether an event has occurred, for example a stop beyond a set time and off the planned route. That makes the system predictable, testable and auditable, and we never let a language model decide whether someone is in danger. Once a rule fires, the AI, running on Amazon Bedrock, does three jobs. It writes a one-line triage action for the fleet manager. It explains to the passenger, in calm plain language, what happened and what her options are. And it answers safety questions on WhatsApp and in the app, from approved guidance only. Why AI? Because turning a raw event into a calm, clear sentence in seconds is exactly what language models do well. And the limits: it never decides someone is in danger, never blames the driver or predicts crime, never claims a passenger is safe, and never replaces emergency services. Rules detect. AI explains. People decide.”**
 
@@ -238,9 +250,9 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 20 · The AI assistant in action
+## Slide 21 · The AI assistant in action
 
-`Magala · 12:40 · about 40 seconds`
+`Magala · 13:25 · about 40 seconds`
 
 > **“Here’s the assistant in a real chat with our prototype number. When we asked what it can do, it explained that it only helps with trip safety and the app. When we asked about Uber, it stayed on topic, said this is a prototype with simulated trips, and said Uber is a different service. In danger, it points to 10111 or 112. It even greets in isiZulu. People use it on WhatsApp by typing or replying 1 or 2, and in the app through the Assistant tab. Operators see the AI’s one-line next step on the fleet dashboard.”**
 
@@ -248,9 +260,9 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 21 · Why each AWS service
+## Slide 22 · Why each AWS service
 
-`Nhlanhla · 13:20 · about 60 seconds`
+`Nhlanhla · 14:05 · about 60 seconds`
 
 > **“Thanks. Now let me explain why we chose each AWS service. CloudFront serves the app quickly and securely, with no web servers for us to run. API Gateway is the front door, including for WhatsApp, and it’s managed, secure and scales with traffic. Lambda runs our rules, check-ins, escalation and AI calls, and we pay only when it runs, so the same code serves one trip or a national fleet. Bedrock gives us foundation models as a service, with no model servers to build. DynamoDB stores trips, alerts and the safety log, fast and scalable, which gives operators their audit trail. CloudWatch lets us trace and prove what happened. And IAM gives each function only the access it needs. It’s serverless throughout: we pay for what we use, and nothing sits idle.”**
 
@@ -260,11 +272,11 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 22 · Live demo: the main user journey
+## Slide 23 · Live demo: the main user journey
 
-`Nhlanhla · 14:20 · about 3 minutes 15 seconds`
+`Nhlanhla · 15:05 · about 3 minutes 15 seconds`
 
-> **“Now let’s see it running. Here is the main user journey. One: I request a ride. Two: here’s the driver and vehicle, a labelled demo driver. Three: I switch on Safe Journey Mode. Four: I trigger a simulated stop. Five: watch the phone. The check-in arrives on WhatsApp.” *[hold up the phone; reply 1, or deliberately don’t]* “Six: on the operator’s dashboard, the alert appears. Seven: finally, the shared-ride saving. Remember: the trip and events are simulated, the WhatsApp number is real, and the assistant runs on Amazon Bedrock.”**
+> **“Now let’s see it running. Here is the main user journey. One: I request a ride. Two: here’s the driver and vehicle, a labelled demo driver. Three: I switch on Safe Journey Mode. Four: I trigger a simulated stop. Five: watch the phone. The check-in arrives on WhatsApp.” *[hold up the phone. Reply 1, or deliberately don’t]* “Six: on the operator’s dashboard, the alert appears. Seven: finally, the shared-ride saving. Remember: the trip and events are simulated, the WhatsApp number is real, and the assistant runs on Amazon Bedrock.”**
 
 *Cue: before you start, set the Fleet wait window to 5 minutes and the simulator to 15× speed, so there is time to reply on the phone. If time allows, show the AWS console in this order: API Gateway, Lambda, DynamoDB, CloudWatch. Keep backup screenshots and a screen recording ready in case anything fails, and switch to them without apologising.*
 
@@ -274,25 +286,35 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 23 · Working, simulated and still to come
+## Slide 24 · Try it yourself
 
-`Nhlanhla · 17:35 · about 40 seconds`
+`Nhlanhla · 18:20 · about 1 minute, while the audience scans`
+
+> **“Now it's your turn. Scan a code. The left one opens the web app: book a ride with your own WhatsApp number, start the trip and press Simulate prolonged stop, and the check-in comes to your phone. The right one opens a WhatsApp chat with our bot: say hi, check a driver, or ask a safety question.” *[give them a few seconds, then switch to the Fleet page]* “While you do that, here's the operator's view. Your trips are appearing on the fleet map right now, and the ones that stop turn amber, then red, with the AI's next step.”**
+
+*Cue: keep the Fleet page open in another tab, already signed in. Trips and drivers are simulated; if someone asks, it's not for real emergencies: 10111 or 112.*
+
+---
+
+## Slide 25 · Working, simulated and still to come
+
+`Nhlanhla · 19:20 · about 40 seconds`
 
 > **“Here’s an honest view of where we are. Working today: ride request with the fare comparison and a monthly budget; Safe Journey Mode with trusted contact, share trip and SOS; proactive WhatsApp check-ins on a real number, answered with 1, 2 or in your own words; the no-reply workflow with an operator-set wait window; the fleet dashboard with AI triage; the Amazon Bedrock assistant; and the safety log in DynamoDB. Simulated: trips and route events, driver profiles and the Face ID result, and the SMS to the trusted contact. The WhatsApp alerts are real. Still to come: live GPS, real driver verification, emergency-service integration, real payments, and a POPIA assessment with an operator pilot. We do not claim to prevent crime, guarantee safety or verify drivers.”**
 
 ---
 
-## Slide 24 · Outstanding work
+## Slide 26 · Outstanding work
 
-`Nhlanhla · 18:15 · about 40 seconds`
+`Nhlanhla · 20:00 · about 40 seconds`
 
 > **“We set ourselves six things to finish before Tuesday. All six are built and in today’s demo: the app is mobile friendly and can be installed on a phone; the AI assistant button is on every page; fares show weekly and monthly totals; the full no-reply workflow runs with an operator-set wait window; and the driver’s Face ID check shows at the start of each ride, simulated for now. And operators now sign in with Amazon Cognito, so only the operator’s safety team can open the fleet dashboard.”**
 
 ---
 
-## Slide 25 · Expected impact
+## Slide 27 · Expected impact
 
-`Nhlanhla · 18:55 · about 30 seconds`
+`Nhlanhla · 20:40 · about 30 seconds`
 
 > **“Three groups benefit. Passengers get calm, clear support and a one-tap check-in. Operators get real-time visibility, faster response and a record of every alert. Communities get cheaper shared travel: a trip at R67.50 alone drops to R27.00 each when three riders share. Those are illustrative fares.”**
 
@@ -300,35 +322,15 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 26 · Safety shouldn’t depend on a button
+## Slide 28 · Safety shouldn’t depend on a button
 
-`Magala · 19:25 · about 70 seconds`
+`Magala · 21:10 · about 70 seconds`
 
-> **“Let’s go back to that car.” [Pause for a full beat.] “It’s night. It has stopped somewhere you don’t recognise. In most apps today, what happens next depends on you finding a button.**
+> **“Let’s go back to that car.” *[pause for a full beat]* “It’s night. It has stopped somewhere you don’t recognise. In most apps today, what happens next depends on you finding a button.**
 
 > In MzansiRide SafeAI, it doesn’t. Your phone buzzes on WhatsApp: ‘Are you safe? Reply 1 or 2.’ One tap. And if you can’t reply, that silence isn’t ignored. The operator already has a clear next step on their screen, and every alert and response is on record. What you’ve seen today isn’t a mock-up of an idea. It’s a working prototype on AWS: a real WhatsApp number, an assistant on Amazon Bedrock, and a safety log in DynamoDB. The trips and drivers are simulated, and we’ve said so on every screen. Three things to remember. One: proactive, not reactive. We don’t wait for the worst moment to ask someone to act. Two: rules detect, AI explains, people decide. The AI helps, and it never judges and never blames. Three: it’s built to scale. It’s serverless, so the same design serves one operator or a national fleet, and the cost grows only with use. And safety isn’t only about fear. It’s about access. A student who shares a R67.50 ride and pays R27.00 is only willing to share if she feels safe doing it. Our next steps are live route data, driver verification, a POPIA assessment, and a pilot with a real operator. We’re not asking anyone to hand their safety to AI. We’re showing how AI can mean fewer passengers face that moment alone, and fewer operators find out too late. Safety shouldn’t depend on a button. Thank you.”
 
 *Cue: slow down on the last sentence, say “Thank you” quietly, and add nothing after it.*
-
----
-
-## Slide 27 · Try it yourself
-
-`Magala · after the close · leave it up during questions`
-
-> **“If you'd like to try it, scan a code. The left one opens the web app: book a ride, put in your own WhatsApp number, start the trip and press Simulate prolonged stop, and the check-in comes to your phone. The right one opens a WhatsApp chat with our bot: say hi, check a driver, or ask a safety question. The trips and drivers are simulated, so please don't use it in a real emergency.”**
-
-*Cue: show this only after the live demo, never before it: a room full of people using it at once can slow the demo down. Leave it on screen during questions.*
-
----
-
-## Slide 28 · Appendix: the full architecture
-
-*Backup slide for questions; not part of the 20-minute run. Use it if a judge asks how the pieces connect, especially WhatsApp. Walk it left to right:*
-
-> **"People reach us two ways: the web app through CloudFront, and WhatsApp through our open-source gateway on EC2. Both arrive at API Gateway. The api Lambda runs the rules and the no-answer ladder and stores everything in DynamoDB; the whatsapp Lambda verifies each webhook's signature and replies through the gateway. Bedrock explains alerts and writes the operator's triage line. Secrets are in SSM Parameter Store and every step is logged in CloudWatch. Operators sign in with Cognito, CloudWatch alarms email the team through SNS, and Location Service is planned."**
-
-*Point out the dashed boxes: the journey simulator is simulated; Location Service is planned. Cognito (operator sign-in) and SNS (alert emails to the team) are built; the SMS to the trusted contact is built but simulated until AWS enables SMS on our account.*
 
 ---
 

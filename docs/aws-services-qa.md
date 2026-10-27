@@ -32,7 +32,7 @@ Read this together before Monday. Every service below answers four questions: **
 - **Alternatives:** *ECS Fargate / App Runner* for a long-running API: no cold starts, but you pay 24/7. *Step Functions* for the escalation timer: we escalate on the next telemetry reading instead, which is simpler. In production, live GPS would use **EventBridge Scheduler** or Step Functions to escalate even if the phone goes silent (see the tough questions).
 
 ## Amazon API Gateway (HTTP API)
-- **What:** `ANY /api/{proxy+}` → `api` Lambda, `POST /whatsapp/webhook` → `whatsapp` Lambda. Throttle of 25 rps, burst 50. Access logs go to CloudWatch.
+- **What:** `ANY /api/{proxy+}` → `api` Lambda, `POST /whatsapp/webhook` → `whatsapp` Lambda. Throttle of 100 rps, burst 200. Access logs go to CloudWatch.
 - **Why HTTP API rather than REST API:** about 70% cheaper and lower latency, and we don't need REST-only features (API keys/usage plans, request validation, WAF directly on the API).
 - **Alternative:** *Lambda Function URLs* would work, but there would be two URLs and no throttling or route-level control. *ALB* is for container backends.
 

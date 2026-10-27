@@ -246,7 +246,7 @@ rehearses the other's part too. The AWS services, the trade-offs and practice an
 - **Feasible now:** the prototype already runs on managed AWS services. Turning it into a pilot mainly means adding live
   GPS, the official WhatsApp API and an operator's real trip feed. The rules, the AI and the dashboard stay as they are.
 - **Scales with use:** Lambda, API Gateway and DynamoDB on-demand scale automatically, and cost grows with trips.
-  **Limits today:** Lambda concurrency is 10 on this account, and the API is throttled at 25 requests a second.
+  **Limits today:** Lambda concurrency is 10 on this account, and the API is throttled at 100 requests a second.
 - **Path to scale:** from thousands of trips, raise the quotas and batch the readings. From 100,000 trips, stream
   telemetry through IoT Core or Kinesis, give each operator its own data partition, and add a second region.
   Details: [architecture-and-scaling.md](architecture-and-scaling.md).

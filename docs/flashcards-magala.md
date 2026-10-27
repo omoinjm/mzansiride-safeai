@@ -1,7 +1,7 @@
 # Flash cards: Magala
 
 **Your part:** the opening, the problem, the solution, the AI, and the close.
-Slides 1–12, 19–20, 26, plus the try-it slide 27 during questions (about 10 minutes). Nhlanhla does the architecture, the frontend, AWS, the live demo and the
+Slides 1–12, 20–21 and the close, 28 (about 10 minutes). Nhlanhla does the architecture, the frontend, AWS, the live demo and the
 outstanding work.
 
 Each slide card has the opening line (say it word for word), the key points (say them in your own words) and the
@@ -119,7 +119,7 @@ handover. Then come the questions judges are most likely to ask you. Full script
 
 *Don't claim that no competitor offers shared rides.*
 
-### Slide 19 · What the AI does, and doesn't · 11:10 · 90 s
+### Slide 20 · What the AI does, and doesn't · 11:55 · 90 s
 **Open:** “Thanks, Nhlanhla. Now the AI, and just as importantly, how we don't use it.”
 - **Detection and intelligence are separate.** Rules decide that an event happened: predictable, testable, auditable.
   “We never let a language model decide whether someone is in danger.”
@@ -135,7 +135,7 @@ handover. Then come the questions judges are most likely to ask you. Full script
 *Which model? Claude Haiku 5.5 on Bedrock is the main model; **Amazon Nova Lite** answers today, because our AWS account
 is on the free plan.*
 
-### Slide 20 · The AI assistant in action · 12:40 · 40 s
+### Slide 21 · The AI assistant in action · 13:25 · 40 s
 **Open:** “Here's the assistant in a real chat with our prototype number.”
 - It **stays on topic**: trip safety and the app only.
 - Asked about Uber, it said this is a prototype and Uber is a different service.
@@ -144,7 +144,7 @@ is on the free plan.*
 
 **Hand over:** “Nhlanhla will now explain why we chose each AWS service, and then show you the live demo.”
 
-### Slide 26 · Close · 19:25 · 70 s
+### Slide 28 · Close · 21:10 · 70 s
 **Open:** “Let's go back to that car.” *Full pause.*
 - It's night, and it stopped somewhere you don't know. In most apps, what happens next depends on you finding a button.
 - **Here it doesn't:** WhatsApp buzzes, “Are you safe? Reply 1 or 2.” One tap. And silence isn't ignored: the operator
@@ -156,15 +156,6 @@ is on the free plan.*
 - **Next steps:** live route data, driver verification, a POPIA assessment, a pilot with a real operator.
 
 *Slow down on the last sentence. Say “Thank you” quietly, and add nothing after it.*
-
-### Slide 27 · Try it yourself · after the close, during questions
-**Open:** “If you'd like to try it, scan a code.”
-- **Left, the web app:** book a ride with your own WhatsApp number, start the trip, press **Simulate prolonged stop**, and
-  the check-in comes to your phone.
-- **Right, WhatsApp:** say hi, **CHECK CA 123-456**, or ask a safety question.
-- “The trips and drivers are simulated, so please don't use it in a real emergency.”
-
-*Only after the live demo: a room full of people using it at once can slow the demo down.*
 
 ---
 
