@@ -1,6 +1,6 @@
 # Monday progress presentation: run-sheet
 
-The deck and the two-presenter script are in [`docs/presentation/`](presentation/): `MzansiRide_SafeAI_Deck.pptx` (26 slides + appendix; speaker notes = the script) and `MzansiRide_SafeAI_Script.pdf`.
+The deck and the two-presenter script are in [`docs/presentation/`](presentation/): `MzansiRide_SafeAI_Deck.pptx` (26 slides + a try-it QR slide + appendix; speaker notes = the script) and `MzansiRide_SafeAI_Script.pdf`.
 
 Requirements (Hackathon 2026 Project Requirements §3) say the presentation must cover: **problem → solution → architecture →
 frontend → AI integration → AWS implementation → working prototype → outstanding work**. Both members must be able to

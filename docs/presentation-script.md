@@ -312,7 +312,17 @@ Read from this while presenting. It follows the deck slide by slide
 
 ---
 
-## Slide 27 · Appendix: the full architecture
+## Slide 27 · Try it yourself
+
+`Magala · after the close · leave it up during questions`
+
+> **“If you'd like to try it, scan a code. The left one opens the web app: book a ride, put in your own WhatsApp number, start the trip and press Simulate prolonged stop, and the check-in comes to your phone. The right one opens a WhatsApp chat with our bot: say hi, check a driver, or ask a safety question. The trips and drivers are simulated, so please don't use it in a real emergency.”**
+
+*Cue: show this only after the live demo, never before it: a room full of people using it at once can slow the demo down. Leave it on screen during questions.*
+
+---
+
+## Slide 28 · Appendix: the full architecture
 
 *Backup slide for questions; not part of the 20-minute run. Use it if a judge asks how the pieces connect, especially WhatsApp. Walk it left to right:*
 

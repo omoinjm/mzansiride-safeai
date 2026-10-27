@@ -1,7 +1,7 @@
 # Flash cards: Magala
 
 **Your part:** the opening, the problem, the solution, the AI, and the close.
-Slides 1–12, 19–20, 26 (about 10 minutes). Nhlanhla does the architecture, the frontend, AWS, the live demo and the
+Slides 1–12, 19–20, 26, plus the try-it slide 27 during questions (about 10 minutes). Nhlanhla does the architecture, the frontend, AWS, the live demo and the
 outstanding work.
 
 Each slide card has the opening line (say it word for word), the key points (say them in your own words) and the
@@ -156,6 +156,15 @@ is on the free plan.*
 - **Next steps:** live route data, driver verification, a POPIA assessment, a pilot with a real operator.
 
 *Slow down on the last sentence. Say “Thank you” quietly, and add nothing after it.*
+
+### Slide 27 · Try it yourself · after the close, during questions
+**Open:** “If you'd like to try it, scan a code.”
+- **Left, the web app:** book a ride with your own WhatsApp number, start the trip, press **Simulate prolonged stop**, and
+  the check-in comes to your phone.
+- **Right, WhatsApp:** say hi, **CHECK CA 123-456**, or ask a safety question.
+- “The trips and drivers are simulated, so please don't use it in a real emergency.”
+
+*Only after the live demo: a room full of people using it at once can slow the demo down.*
 
 ---
 
