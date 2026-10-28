@@ -12,7 +12,7 @@ make e2e                          # Playwright (web/e2e), default against :8077;
 make deploy                       # plan -out + apply that plan + `make site` (S3 sync + invalidation)
 make wa-setup / wa-qr / wa-status # OpenWA admin via SSM (scripts/openwa.sh)
 ```
-Deploying = pushing to `main` (`.github/workflows/deploy.yml`, OIDC role `github-deploy-mzansiride`). The Makefile wraps Terraform with `aws configure export-credentials` because Terraform can't read `aws login` sessions. Port 8000 is taken on the dev machine, so local mode uses 8077.
+Deploying = pushing to `main` (`.github/workflows/deploy.yml`, OIDC role `github-deploy-mzansiride`). **The AWS stack was torn down on 2026-10-28** and the workflow is disabled on GitHub. The state bucket, the deploy role and the OIDC provider remain. To rebuild, run `make deploy`, or `gh workflow enable deploy.yml` and push. The WhatsApp bot then needs `make wa-setup` / `make wa-qr` again. The Makefile wraps Terraform with `aws configure export-credentials` because Terraform can't read `aws login` sessions. Port 8000 is taken on the dev machine, so local mode uses 8077.
 
 ## Architecture (cross-file)
 - **`src/core/` is channel-agnostic.** The `api` Lambda (`api.handler.handler`) and `whatsapp` Lambda (`whatsapp.handler.handler`) ship the same zip of `src/` (no third-party deps). `core/commands.py` is the WhatsApp conversation logic, also used by the web simulator (`/api/whatsapp/simulate`, chat ids `sim:<session>`, pushed messages via the `outbox#` item).
